@@ -6,7 +6,7 @@
 
 **Fee sink:** `kaspatest:qq9h47etjv6x8jgcla0ecnp8mgrkfxm70ch3k60es5a50ypsf4h6sak3g0lru`
 
-**Suggested label:** `stp-smoke-<unix>.kas` (5+ graphemes → **35 KAS** fee; hold ≥ ~36.75 KAS).
+**Suggested label:** `stp-smoke-<unix>.kas` (5+ graphemes → **35 tKAS** fee; hold ≥ ~36.75 tKAS).
 
 ## Exact steps
 

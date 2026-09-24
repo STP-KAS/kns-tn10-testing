@@ -62,6 +62,8 @@ Official [@knsdomain](https://x.com/knsdomain) posts ([post 1](https://x.com/kns
 
 KNS is moving `.kas` registration onto covenants on Testnet-10, with a redesigned UI, a claim/airdrop mechanism, and the Kaspire wallet coming to TN10 and mainnet. Independent testing on TN10 now helps catch problems before mainnet. The runs here use the current inscription path, not the covenant path.
 
+What to copy from this lab, and what to take from DOTK 2.0 instead of copying `.k`: [FOR-KNS.md](FOR-KNS.md).
+
 ## How
 
 Nothing here is needed to use KNS. It is how this desk ran the tests. Scripts assume the box layout `/workspace/artifacts/kns-tn10/` (`scripts/`, `api/`, `snapshot-wallets/`, `npm-kaspa/`, `wasm-sdk/`). Adjust paths if you copy them.
@@ -176,6 +178,8 @@ Findings ([docs/FINDINGS-DRAFT.md](docs/FINDINGS-DRAFT.md), run notes):
 - KNS TN10 site: https://tn10.knsdomains.org/
 - KNS TN10 indexer: https://api.knsdomains.org/tn10 · API docs: https://apidoc.knsdomains.org/tn10/
 - KNS docs: https://kns-2.gitbook.io/kns-docs-1/
+- For KNS, inscription lab vs DOTK 2.0: [FOR-KNS.md](FOR-KNS.md)
+- Mix sketch this lab was read against: [STP-KAS/kns-dotk](https://github.com/STP-KAS/kns-dotk)
 - Protocol reference: [STP-KAS/kns-spec](https://github.com/STP-KAS/kns-spec) (copies in [docs/kns-spec/](docs/kns-spec/))
 - Snapshot holder set for the KNS team: [kns-spec/snapshot-tn10](https://github.com/STP-KAS/kns-spec/tree/main/snapshot-tn10)
 - Older lab: [STP-KAS/kns-kasware-tn10-test](https://github.com/STP-KAS/kns-kasware-tn10-test)
