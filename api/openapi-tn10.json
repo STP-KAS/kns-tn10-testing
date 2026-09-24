@@ -1,0 +1,1218 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "KNS API Documentation",
+    "version": "0.1.4",
+    "description": "API documentation for Kaspa Name Service"
+  },
+  "servers": [
+    {
+      "url": "https://api.knsdomains.org/mainnet"
+    },
+    {
+      "url": "https://api.knsdomains.org/tn10"
+    }
+  ],
+  "paths": {
+    "/api/v1/assets": {
+      "get": {
+        "summary": "Get assets by owner",
+        "description": "Retrieve a list of assets owned by a specific user, including pagination, domain verification status, and asset status.",
+        "tags": [
+          "Assets"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "kaspatest:qz95ctqkq6mx4xqa8q4p3vymcltgm2uuxgwspvh3nxjefgx74zwnjul8qyjtu"
+            },
+            "description": "The owner address to query assets for."
+          },
+          {
+            "in": "query",
+            "name": "asset",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "kaspador.kas"
+            },
+            "description": "The asset domain to query assets for."
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "default",
+                "listed"
+              ]
+            },
+            "description": "The asset status to query assets for. Possible values are \"default\" or \"listed\"."
+          },
+          {
+            "in": "query",
+            "name": "collection",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                99,
+                999,
+                9999
+              ]
+            },
+            "description": "The collection to query assets for."
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "domain",
+                "text"
+              ]
+            },
+            "description": "The Type to query assets for."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "example": 1
+            },
+            "description": "The page number for pagination (default is 1)."
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100,
+              "example": 20
+            },
+            "description": "The number of items per page (default is 20, maximum is 100)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "assets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "assetId": {
+                            "type": "string",
+                            "description": "The ID of the asset.",
+                            "example": "905c6f2be85b374bfa70b9cd28a5ddf57e8b0a37599a52c0c5710ac53e175cf3i0"
+                          },
+                          "mimeType": {
+                            "type": "string",
+                            "description": "The MIME type of the asset.",
+                            "example": ""
+                          },
+                          "asset": {
+                            "type": "string",
+                            "description": "The asset value.",
+                            "example": "123123123.kas"
+                          },
+                          "creationBlockTime": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "The block creation time of the asset.",
+                            "example": "2024-12-26T05:09:30.970Z"
+                          },
+                          "owner": {
+                            "type": "string",
+                            "description": "The owner of the asset.",
+                            "example": "8b4c2c1606b66a981d382a18b09bc7d68dab9c321d00b2f199a594a0dea89d39"
+                          },
+                          "isDomain": {
+                            "type": "boolean",
+                            "description": "Indicates if the asset is a domain.",
+                            "example": true
+                          },
+                          "isVerifiedDomain": {
+                            "type": "boolean",
+                            "description": "Indicates if the domain is verified.",
+                            "example": true
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "default",
+                              "listed"
+                            ],
+                            "description": "The status of the asset, either \"default\" or \"listed\".",
+                            "example": "listed"
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "currentPage": {
+                          "type": "integer",
+                          "description": "The current page number.",
+                          "example": 1
+                        },
+                        "pageSize": {
+                          "type": "integer",
+                          "description": "The number of items per page.",
+                          "example": 20
+                        },
+                        "totalItems": {
+                          "type": "integer",
+                          "description": "The total number of items.",
+                          "example": 100
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "description": "The total number of pages.",
+                          "example": 5
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Invalid owner parameter."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Failed to fetch assets by owner."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asset/{assetId}/detail": {
+      "get": {
+        "summary": "Get asset details",
+        "description": "Retrieve detailed information about a specific asset by its inscription ID.",
+        "tags": [
+          "Assets"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assetId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The unique identifier of the asset inscription."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved asset details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "8077"
+                        },
+                        "assetId": {
+                          "type": "string",
+                          "example": "9f5360d04fa86f9175058130925187aee75ed3b05417d51af31882af31e2e8c9i0"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "example": ""
+                        },
+                        "asset": {
+                          "type": "string",
+                          "example": "testss11.kas"
+                        },
+                        "owner": {
+                          "type": "string",
+                          "example": "kaspatest:qrnfxakau7ud9a5zd9cd2th2sdpzc8qwc988excn4qzg4cgttt04yxx25cxvn"
+                        },
+                        "creationBlockTime": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2025-03-13T21:53:56.390Z"
+                        },
+                        "isDomain": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "isVerifiedDomain": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "listed"
+                        },
+                        "transactionId": {
+                          "type": "string",
+                          "example": "9f5360d04fa86f9175058130925187aee75ed3b05417d51af31882af31e2e8c9"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid assetId parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Invalid assetId parameter."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Asset not found."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Failed to check domain availability."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{domain}/owner": {
+      "get": {
+        "summary": "Get asset owner by domain (case-insensitive)",
+        "description": "Fetch the owner of a specific asset by domain name, ignoring case sensitivity.",
+        "tags": [
+          "Domain"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain",
+            "required": true,
+            "description": "The domain name of the asset to fetch. It must end with `.kas` and not contain spaces.",
+            "schema": {
+              "type": "string",
+              "example": "kaspador.kas"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched the asset owner.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "26"
+                        },
+                        "asset": {
+                          "type": "string",
+                          "example": "kaspador.kas"
+                        },
+                        "owner": {
+                          "type": "string",
+                          "example": "kaspatest:qqwdew8f0d95vmlnqcp5wpgrh4pfzrdec6y74a69frlzzpw3rtmws3lu8qhn2"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error in the path parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Validation failed"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Validation failed"
+                    },
+                    "validation": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string",
+                              "example": "path"
+                            },
+                            "keys": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": [
+                                "domain"
+                              ]
+                            },
+                            "message": {
+                              "type": "string",
+                              "example": "\"Domain\" with value \"dasdfasdfasdf\" fails to match the required pattern: /\\.kas$/"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Domain not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Domain not found."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Domain not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to fetch owner by domain."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Internal Server Error"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/domains/check": {
+      "post": {
+        "summary": "Check domain availability",
+        "description": "Validate the availability and reservation status of the provided domain names.",
+        "tags": [
+          "Domain"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "domainNames": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 100,
+                    "description": "A list of domain names to check. Maximum 100 domains are allowed.",
+                    "example": [
+                      "kaspa.kas",
+                      "dwork.kas",
+                      "918271.kas"
+                    ]
+                  },
+                  "address": {
+                    "type": "string",
+                    "description": "User wallet address.",
+                    "example": "kaspa:qzt9yuqceqvt2vk9dz7ddzayaa5flnenkymec59xvzm55ln3k72vgecxjhnjp"
+                  }
+                },
+                "required": [
+                  "domainNames",
+                  "address"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully checked domain availability.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "domains": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "domain": {
+                                "type": "string",
+                                "description": "The domain name checked.",
+                                "example": "1.kas"
+                              },
+                              "available": {
+                                "type": "boolean",
+                                "description": "Whether the domain is available for registration.",
+                                "example": false
+                              },
+                              "isReservedDomain": {
+                                "type": "boolean",
+                                "description": "Whether the domain is reserved.",
+                                "example": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error in the request body, such as invalid domain names or missing parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Error message describing the issue.",
+                      "example": "Domain \"1.ka2s\" has an invalid TLD."
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Detailed error description.",
+                      "example": "Domain \"1.ka2s\" has an invalid TLD."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error, such as an unexpected issue during execution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "General error message.",
+                      "example": "Failed to check domain availability."
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Detailed error description, such as internal code execution errors.",
+                      "example": "Unreachable code should not be executed (evaluating 'wasm.address_constructor(ptr0, len0)')"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/domain/{assetId}/profile": {
+      "get": {
+        "summary": "Get domain profile information",
+        "description": "Fetch profile information for a specific domain by asset ID (inscription ID).",
+        "tags": [
+          "Domain"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assetId",
+            "required": true,
+            "description": "The asset ID (inscription ID) of the domain.",
+            "schema": {
+              "type": "string",
+              "example": "4a003c2c7402626499053467a0f05e63877d79076bbabdb8caa32a5870ce23c7i0"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keys",
+            "required": false,
+            "description": "Comma-separated list of profile keys to retrieve. Maximum 20 keys allowed. If not provided, default keys will be returned.",
+            "schema": {
+              "type": "string",
+              "example": "redirectUrl,bio,avatarUrl"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched domain profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "assetId": {
+                          "type": "string",
+                          "example": "4a003c2c7402626499053467a0f05e63877d79076bbabdb8caa32a5870ce23c7i0"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "kaspador"
+                        },
+                        "tld": {
+                          "type": "string",
+                          "example": "kas"
+                        },
+                        "profile": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "example": {
+                            "redirectUrl": "https://example.com",
+                            "bio": "This is my bio",
+                            "avatarUrl": "https://storage.knsdomains.org/avatar.png",
+                            "x": "@username",
+                            "website": "https://mywebsite.com",
+                            "telegram": null,
+                            "discord": null,
+                            "contactEmail": "contact@example.com",
+                            "bannerUrl": null,
+                            "github": null
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error in the path parameters or too many keys requested.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Maximum 20 keys allowed per request"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Too many keys requested"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Domain not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Domain not found"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Domain not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to fetch domain profile"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Internal Server Error"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/domain/primary-name": {
+      "post": {
+        "summary": "Set primary name for user",
+        "description": "Set a domain as the primary name for the authenticated user's wallet address.",
+        "tags": [
+          "Domain"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "signMessage": {
+                    "type": "string",
+                    "description": "JSON string containing domainId (inscription ID) and timestamp",
+                    "example": "{\"domainId\":\"4a003c2c7402626499053467a0f05e63877d79076bbabdb8caa32a5870ce23c7i0\",\"timestamp\":1234567890123}"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "Signature for the signMessage",
+                    "example": "signature_string_here"
+                  }
+                },
+                "required": [
+                  "signMessage",
+                  "signature"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully set primary name.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Primary name set successfully"
+                        },
+                        "ownerAddress": {
+                          "type": "string",
+                          "example": "kaspa:qzt9yuqceqvt2vk9dz7ddzayaa5flnenkymec59xvzm55ln3k72vgecxjhnjp"
+                        },
+                        "inscriptionId": {
+                          "type": "string",
+                          "example": "4a003c2c7402626499053467a0f05e63877d79076bbabdb8caa32a5870ce23c7i0"
+                        },
+                        "action": {
+                          "type": "string",
+                          "enum": [
+                            "created",
+                            "updated"
+                          ],
+                          "example": "created"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or missing required fields.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "signMessage and signature are required"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Missing required fields"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Signature verification failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Signature verification failed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Domain not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Domain not found"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Domain not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to set primary name"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Internal Server Error"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/primary-name/{owner_address}": {
+      "get": {
+        "summary": "Get primary name by owner address",
+        "description": "Fetch the primary name (domain) for a specific wallet address. The API will verify that the domain still belongs to the requested owner.",
+        "tags": [
+          "Domain"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "owner_address",
+            "required": true,
+            "description": "The wallet address of the owner",
+            "schema": {
+              "type": "string",
+              "example": "kaspa:qzt9yuqceqvt2vk9dz7ddzayaa5flnenkymec59xvzm55ln3k72vgecxjhnjp"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully fetched primary name.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ownerAddress": {
+                          "type": "string",
+                          "example": "kaspa:qzt9yuqceqvt2vk9dz7ddzayaa5flnenkymec59xvzm55ln3k72vgecxjhnjp"
+                        },
+                        "inscriptionId": {
+                          "type": "string",
+                          "example": "4a003c2c7402626499053467a0f05e63877d79076bbabdb8caa32a5870ce23c7i0"
+                        },
+                        "domain": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "example": "kaspador"
+                            },
+                            "tld": {
+                              "type": "string",
+                              "example": "kas"
+                            },
+                            "fullName": {
+                              "type": "string",
+                              "example": "kaspador.kas"
+                            },
+                            "isVerified": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "status": {
+                              "type": "string",
+                              "example": "default"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid owner address parameter.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Owner address is required"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Invalid owner address"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Primary name not found or domain ownership mismatch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Primary name not found"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Primary name not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "data": {
+                      "type": null,
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to fetch primary name"
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Internal Server Error"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "tags": []
+}

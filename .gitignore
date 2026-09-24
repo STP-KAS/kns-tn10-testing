@@ -1,0 +1,41 @@
+# Keys, wallets, secrets: never commit
+*.key
+*.pem
+*.hex
+*.keystore
+*.wallet
+*.p12
+*.pfx
+*mnemonic*
+*seed*
+*privkey*
+*private*key*
+*xprv*
+secrets/
+.secrets/
+wallets/
+wallets.jsonl*
+privkeys*
+backup-*.txt
+env.paths
+.env
+.env.*
+*.env
+# Run state and logs from the test box
+*.log
+*.pid
+*.pid.*
+*.stdout
+*.bak
+*.bak-*
+*.unused
+*.superseded
+snapshot-wallets/
+api/smoke-result-*.json
+api/*child*.log
+# Tooling
+node_modules/
+npm-kaspa/
+wasm-sdk/
+*.zip
+.DS_Store
