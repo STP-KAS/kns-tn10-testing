@@ -43,7 +43,7 @@ From the run notes, not a mission statement:
 - **Conformance.** Check that a script built only from [kns-spec](https://github.com/STP-KAS/kns-spec) (`PROTOCOL.md`, `CONFORMANCE.md`) and the KNS docs produces creates the official TN10 indexer accepts: fee output 0, grapheme pricing, `domains/check` before every create.
 - **Wallet behaviour.** The KasWare path (`buildScript` → `submitCommitReveal`) was the intended reference. On the box, KasWare was not injected, so the wallet UI stayed unverified and the scripted path was used ([docs/KASWARE-CREATE-TN10.md](docs/KASWARE-CREATE-TN10.md)).
 - **Load and bulk behaviour.** Pace thousands of creates from one payer and from many payers, and see where the public node, the indexer and the create code break.
-- **Snapshot testing.** Thousands of distinct holder addresses with names. The snapshot `addresses.csv` is marked shareable with the KNS team; it is not published here.
+- **Snapshot testing.** Thousands of distinct holder addresses with names. The snapshot `addresses.csv` (and a holders-with-names join) is shared with the KNS team in the kns-spec repo: [STP-KAS/kns-spec/snapshot-tn10](https://github.com/STP-KAS/kns-spec/tree/main/snapshot-tn10).
 - **Find bugs before mainnet.** Several were found (see Results). Smoke first, then scale: "Do not scale until smoke green" ([SMOKE-PLAN.md](SMOKE-PLAN.md)).
 
 ### Why now: KNS team status
@@ -138,16 +138,16 @@ Run notes: [Phase A](docs/runs/SNAPSHOT-PHASE-A.md), [S3](docs/runs/S3.md), [R1]
 
 ## Results so far
 
-Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **24 Sep 2026 23:07 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. Runs were still going at export time, so these numbers are a floor.
+Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **24 Sep 2026 23:20 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. Runs were still going at export time, so these numbers are a floor.
 
 | Run | Creates with reveal tx | Notes |
 | --- | --- | --- |
 | Smoke | 1 | `stp-smoke-1789839537.kas`, 19 Sep ~19:45 CEST, indexer owner matched |
-| Bulk | 1,126 | `stp-bulk-0001`–`1126`, no gaps. Target 3,000. Batch 1001–1250 running since 21:30 CEST |
-| Snapshot Phase A | 4,580 | across 129 wallets; 9 wallets have all 100 |
-| S3 | 693 | across 234 wallets; target 50,000. All 60,000 candidate names pre-checked available (`s3-name-precheck.json`, 21:40 CEST) |
-| R1 | 85 | incl. 16 three-char (2,100 tKAS) and 10 four-char (525 tKAS). 380 of 5,000 wallets funded at 23:07 CEST |
-| **Total** | **6,485** | |
+| Bulk | 1,143 | `stp-bulk-0001`–`1143`, no gaps. Target 3,000. Batch 1001–1250 running since 21:30 CEST |
+| Snapshot Phase A | 6,207 | across 163 wallets; 11 wallets have all 100 |
+| S3 | 791 | across 269 wallets; target 50,000. All 60,000 candidate names pre-checked available (`s3-name-precheck.json`, 21:40 CEST) |
+| R1 | 616 | incl. 76 three-char (2,100 tKAS) and 84 four-char (525 tKAS). 616 of 5,000 wallets funded (`desk-fund-r1-status.json`, 23:09 CEST) |
+| **Total** | **8,758** | |
 
 Indexer check: 23 Sep, `stp-bulk-0001`–`0750` all returned an owner from the TN10 indexer (750/750, [older repo](https://github.com/STP-KAS/kns-kasware-tn10-test)). Names after that were not re-checked for this publication.
 
@@ -177,6 +177,7 @@ Findings ([docs/FINDINGS-DRAFT.md](docs/FINDINGS-DRAFT.md), run notes):
 - KNS TN10 indexer: https://api.knsdomains.org/tn10 · API docs: https://apidoc.knsdomains.org/tn10/
 - KNS docs: https://kns-2.gitbook.io/kns-docs-1/
 - Protocol reference: [STP-KAS/kns-spec](https://github.com/STP-KAS/kns-spec) (copies in [docs/kns-spec/](docs/kns-spec/))
+- Snapshot holder set for the KNS team: [kns-spec/snapshot-tn10](https://github.com/STP-KAS/kns-spec/tree/main/snapshot-tn10)
 - Older lab: [STP-KAS/kns-kasware-tn10-test](https://github.com/STP-KAS/kns-kasware-tn10-test)
 - Front door: [STP-KAS/kaspa-dapps](https://github.com/STP-KAS/kaspa-dapps) · pins: [STP-KAS/kaspa-master-file](https://github.com/STP-KAS/kaspa-master-file)
 - TN10 faucet: https://sixpack.wtf/faucet.html

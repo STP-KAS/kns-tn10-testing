@@ -4,6 +4,8 @@ Newest first. Times Europe/Brussels.
 
 ## 24 Sep 2026
 
+- 23:20: snapshot `addresses.csv` (25,700 `kaspatest:` addresses, BIP44 `m/44'/111111'/0'/0/{i}`) shared with the KNS team at [STP-KAS/kns-spec/snapshot-tn10](https://github.com/STP-KAS/kns-spec/tree/main/snapshot-tn10), with `holders-with-names.csv`: 1,048 addresses hold at least one name, 7,614 names in total (joined on payer address from `results/inscriptions.csv`). Keys and mnemonic not published.
+- 23:20: `results/inscriptions.csv` refreshed: 8,758 creates with reveal tx (bulk 1,143, Phase A 6,207, S3 791, R1 616, smoke 1). README results updated.
 - Repo published. README (what, why, how, results), sanitized scripts, kns-spec copies, run notes, TN10 OpenAPI, results CSV.
 - Added "Why now: KNS team status" with the @knsdomain posts ([1](https://x.com/knsdomain/status/2101290557821899234), [2](https://x.com/knsdomain/status/2098591421825794299)): covenant `.kas` registration tested on TN10, UI/UX redesign ~80%, airdrop/claim WIP, Kaspire wallet on TN10/mainnet soon.
 - State at 23:07 CEST, from `results/inscriptions.csv` (6,485 creates with reveal tx):
