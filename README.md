@@ -140,16 +140,16 @@ Run notes: [Phase A](docs/runs/SNAPSHOT-PHASE-A.md), [S3](docs/runs/S3.md), [R1]
 
 ## Results so far
 
-Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **24 Sep 2026 23:20 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. Runs were still going at export time, so these numbers are a floor.
+Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **25 Sep 2026 20:07 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. The slow S3 runner was still going at export time, so these numbers are a floor.
 
 | Run | Creates with reveal tx | Notes |
 | --- | --- | --- |
 | Smoke | 1 | `stp-smoke-1789839537.kas`, 19 Sep ~19:45 CEST, indexer owner matched |
-| Bulk | 1,143 | `stp-bulk-0001`–`1143`, no gaps. Target 3,000. Batch 1001–1250 running since 21:30 CEST |
-| Snapshot Phase A | 6,207 | across 163 wallets; 11 wallets have all 100 |
-| S3 | 791 | across 269 wallets; target 50,000. All 60,000 candidate names pre-checked available (`s3-name-precheck.json`, 21:40 CEST) |
-| R1 | 616 | incl. 76 three-char (2,100 tKAS) and 84 four-char (525 tKAS). 616 of 5,000 wallets funded (`desk-fund-r1-status.json`, 23:09 CEST) |
-| **Total** | **8,758** | |
+| Bulk | 1,341 | `stp-bulk-0001`–`1341`, no gaps. Target 3,000. Fast bulk stopped at the ~02:00 slow-pace switch |
+| Snapshot Phase A | 28,837 | across 357 wallets; 248 wallets have all 100. Stopped at the ~02:00 slow-pace switch |
+| S3 | 13,723 | across 5,481 wallets; target 50,000. One slow runner continues (≤2 creates / 10 min) |
+| R1 | 910 | incl. 119 three-char (2,100 tKAS) and 122 four-char (525 tKAS). 910 of 5,000 wallets funded (`desk-fund-r1-status.json`). Stopped at the ~02:00 slow-pace switch |
+| **Total** | **44,812** | |
 
 Indexer check: 23 Sep, `stp-bulk-0001`–`0750` all returned an owner from the TN10 indexer (750/750, [older repo](https://github.com/STP-KAS/kns-kasware-tn10-test)). Names after that were not re-checked for this publication.
 
