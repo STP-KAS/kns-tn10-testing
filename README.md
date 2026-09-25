@@ -182,6 +182,7 @@ Findings ([docs/FINDINGS-DRAFT.md](docs/FINDINGS-DRAFT.md), run notes):
 - Mix sketch this lab was read against: [STP-KAS/kns-dotk](https://github.com/STP-KAS/kns-dotk)
 - Protocol reference: [STP-KAS/kns-spec](https://github.com/STP-KAS/kns-spec) (copies in [docs/kns-spec/](docs/kns-spec/))
 - Snapshot holder set for the KNS team: [kns-spec/snapshot-tn10](https://github.com/STP-KAS/kns-spec/tree/main/snapshot-tn10)
+- How we recommend testing a snapshot with it: [kns-spec/snapshot-tn10/TESTING-SNAPSHOT.md](https://github.com/STP-KAS/kns-spec/blob/main/snapshot-tn10/TESTING-SNAPSHOT.md)
 - Older lab: [STP-KAS/kns-kasware-tn10-test](https://github.com/STP-KAS/kns-kasware-tn10-test)
 - Front door: [STP-KAS/kaspa-dapps](https://github.com/STP-KAS/kaspa-dapps) · pins: [STP-KAS/kaspa-master-file](https://github.com/STP-KAS/kaspa-master-file)
 - TN10 faucet: https://sixpack.wtf/faucet.html

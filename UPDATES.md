@@ -2,6 +2,13 @@
 
 Newest first. Times Europe/Brussels.
 
+## 25 Sep 2026
+
+- ~02:00: switched to a slow pace. The fast runners (bulk, Phase A, S3, R1 pools) were stopped gracefully (all stopped by 02:16), and one slow runner continues the S3 queue at **at most 2 creates per 10 minutes** across all runners (5 min pause after every name, reveal must be accepted before the next). Miners untouched.
+- 06:01: [kns-spec/snapshot-tn10/holders-with-names.csv](https://github.com/STP-KAS/kns-spec/blob/main/snapshot-tn10/holders-with-names.csv) refreshed, straight from the per-create result records: **6,693** of 25,700 snapshot addresses hold at least one name, **43,303** names in total (Phase A `stp-snap-*` 28,837, S3 `stp-s3-*` 13,556, R1 random 910). Wallet number in every Phase A / S3 name matches the address index (0 mismatches). Read-only owner sample on the TN10 indexer: 45/45 match. Bulk (1,341) and smoke (1) names sit on a separate, non-snapshot address. Counts are a minimum while the slow runner continues.
+- New: [kns-spec/snapshot-tn10/TESTING-SNAPSHOT.md](https://github.com/STP-KAS/kns-spec/blob/main/snapshot-tn10/TESTING-SNAPSHOT.md), our recommendation to the KNS team on how a snapshot works best for testing (freeze point + file hash, what to include, test categories incl. 0-name controls, claim/edge/scale/reorg tests, and what we can do on our side). Keys stay with us.
+- `results/inscriptions.csv` and the README results table are still the 24 Sep 23:20 CEST export; the nightly routine refreshes them.
+
 ## 24 Sep 2026
 
 - Report for KNS: [FOR-KNS.md](FOR-KNS.md). This lab against [kns-dotk](https://github.com/STP-KAS/kns-dotk), plus DOTK news through 23 Sep (SDK 2.0.0, subnames as card records, `url` → `<name>.kaspa.name`). Smoke plan unit corrected to tKAS.
