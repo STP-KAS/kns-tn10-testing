@@ -4,9 +4,9 @@ This is the implementer contract. Official KNS owns the indexer and profile insc
 
 Official: [inscriptions](https://kns-2.gitbook.io/kns-docs-1/inscriptions/overview) · [wallets](https://kns-2.gitbook.io/kns-docs-1/supporting-wallet) · [indexer API](https://kns-2.gitbook.io/kns-docs-1/kns-indexer-api) · [integration note](https://kns-2.gitbook.io/kns-docs-1/kns-indexer-api/integration-important-note)
 
-Schema: [`schemas/overlay-records.schema.json`](schemas/overlay-records.schema.json)  
-Vectors: [`schemas/vectors.json`](schemas/vectors.json)  
-Proposed profile keys: [`PROFILE.md`](PROFILE.md)
+Schema: [`schemas/overlay-records.schema.json`](https://github.com/STP-KAS/kns-spec/blob/main/schemas/overlay-records.schema.json)  
+Vectors: [`schemas/vectors.json`](https://github.com/STP-KAS/kns-spec/blob/main/schemas/vectors.json)  
+Proposed profile keys: [`PROFILE.md`](https://github.com/STP-KAS/kns-spec/blob/main/PROFILE.md)
 
 ## MUST (or you are not KNS-compatible)
 

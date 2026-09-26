@@ -84,7 +84,7 @@ No Cloudflare. No Google DNS. No app store. KasWare/Kastle/Kurncy/Kasanova alrea
    Elevate inscription → `KasName.sil`. Parent-issued subnames (`pay.shop.kas` only shop can mint). That is how hierarchy becomes real without a single ENS registry.
 
 3. **Session**  
-   Noise XX with **X25519** keys **bound** by a KIP-5 Schnorr signature. Do not claim libp2p PeerId = Kaspa schnorr (ECDSA vs BIP340). Default rendezvous is a capability, not a public multiaddr. See [WEB4.md](WEB4.md).
+   Noise XX with **X25519** keys **bound** by a KIP-5 Schnorr signature. Do not claim libp2p PeerId = Kaspa schnorr (ECDSA vs BIP340). Default rendezvous is a capability, not a public multiaddr. See [WEB4.md](https://github.com/STP-KAS/kns-spec/blob/main/WEB4.md).
 
 4. **Optional lane**  
    KIP-21 `lane` for ordered mail for that name. Not required to start.
