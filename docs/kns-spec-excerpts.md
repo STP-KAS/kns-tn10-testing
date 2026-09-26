@@ -3,13 +3,13 @@
 ===== README.md =====
 > **Experimental only. Not a product.** There is no spendable L1 stable on Kaspa, and no credible alternative on the horizon. Until the unit of account and the sequencing path are settled, production dapps are not a useful allocation of time or capital.
 >
-> Do not use wallet integrations on this GitHub. STP remains a clown. [DISCLAIMER.md](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/DISCLAIMER.md)
+> Do not use wallet integrations on this GitHub. STP remains a clown. [DISCLAIMER.md](https://github.com/STP-KAS/kns-spec/blob/dd07036/DISCLAIMER.md)
 
 # KNS implementer kit
 
 **URL for the KNS team:** https://stp-kas.github.io/kns-spec/
 
-Letter in this repo: [FOR-KNS.md](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/FOR-KNS.md).
+Letter in this repo: [FOR-KNS.md](https://github.com/STP-KAS/kns-spec/blob/dd07036/FOR-KNS.md).
 
 For the KNS team and wallets. Two objects. Do not mix them.
 
@@ -26,11 +26,11 @@ Sister demo (Web4 UI, not this spec): [STP-KAS/kns](https://github.com/STP-KAS/k
 
 Official docs: [inscriptions](https://kns-2.gitbook.io/kns-docs-1/inscriptions/overview) · [wallets](https://kns-2.gitbook.io/kns-docs-1/supporting-wallet) · [indexer API](https://kns-2.gitbook.io/kns-docs-1/kns-indexer-api) · [simply-kaspa-indexer](https://github.com/supertypo/simply-kaspa-indexer)
 
-**Keep it real:** [`REAL.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/REAL.md) — what is live vs paper, and the non-crypto work (wallet chrome, indexer spec, pinning, no lookup logs). Architecture map (not shipped): [`WEB4.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/WEB4.md).
+**Keep it real:** [`REAL.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/REAL.md) — what is live vs paper, and the non-crypto work (wallet chrome, indexer spec, pinning, no lookup logs). Architecture map (not shipped): [`WEB4.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/WEB4.md).
 
-1. **Inscribe** with a [supporting wallet](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/WALLETS.md). KasWare ([`KASWARE.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/KASWARE.md)) or Kastle **extension** ([`KASTLE.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/KASTLE.md)). Kastle **mobile cannot inscribe**. Envelope: [`PROTOCOL.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/PROTOCOL.md). Check the indexer first ([`INDEXER.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/INDEXER.md)).
+1. **Inscribe** with a [supporting wallet](https://github.com/STP-KAS/kns-spec/blob/dd07036/WALLETS.md). KasWare ([`KASWARE.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/KASWARE.md)) or Kastle **extension** ([`KASTLE.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/KASTLE.md)). Kastle **mobile cannot inscribe**. Envelope: [`PROTOCOL.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/PROTOCOL.md). Check the indexer first ([`INDEXER.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/INDEXER.md)).
 2. **Resolve** with `api.knsdomains.org`. URL-encode names. Warn before sending KAS to a resolved address.
-3. **Optional elevate** to a Name UTXO: compile [`contracts/v1/KasName.sil`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/contracts/v1/KasName.sil) with official **silverc v1.0.0** (Ori, 9 Sep 2026). Own-UTXO only. Continuation keeps the same sompi (fees from a sibling input). No `readInputState` of a foreign covenant ([silverscript#234](https://github.com/kaspanet/silverscript/pull/234) still unmerged). Battle-test notes: [`BATTLETEST.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/BATTLETEST.md).
+3. **Optional elevate** to a Name UTXO: compile [`contracts/v1/KasName.sil`](https://github.com/STP-KAS/kns-spec/blob/dd07036/contracts/v1/KasName.sil) with official **silverc v1.0.0** (Ori, 9 Sep 2026). Own-UTXO only. Continuation keeps the same sompi (fees from a sibling input). No `readInputState` of a foreign covenant ([silverscript#234](https://github.com/kaspanet/silverscript/pull/234) still unmerged). Battle-test notes: [`BATTLETEST.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/BATTLETEST.md).
 
 ```powershell
 go test ./...
@@ -81,7 +81,7 @@ These are **unrevealed P2SH deploys**. Explorer action = `deploy`, status = `unr
 
 `trump.kas` and `bakery.kas` already exist as **KNS inscriptions owned by other keys**. The P2SH above is a second object. `opus.kas` has no inscription (indexer: domain not found). Subnames (`opus.dei.kas`) are not an inscription op.
 
-Machine-readable: [`proofs/proofs.json`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/proofs/proofs.json). Re-check: `go run ./cmd/kns-spec prove`.
+Machine-readable: [`proofs/proofs.json`](https://github.com/STP-KAS/kns-spec/blob/dd07036/proofs/proofs.json). Re-check: `go run ./cmd/kns-spec prove`.
 
 ## What this repo is not
 
@@ -116,7 +116,7 @@ Source of truth (official):
 - Wallets: https://kns-2.gitbook.io/kns-docs-1/supporting-wallet
 - L1 indexer used by the resolver: https://github.com/supertypo/simply-kaspa-indexer
 
-This file is the copy a wallet can implement without hunting. Wallets: [`WALLETS.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/WALLETS.md). Indexers: [`INDEXER.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/INDEXER.md). Overlay (`kns://`): [`OVERLAY.md`](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/OVERLAY.md).
+This file is the copy a wallet can implement without hunting. Wallets: [`WALLETS.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/WALLETS.md). Indexers: [`INDEXER.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/INDEXER.md). Overlay (`kns://`): [`OVERLAY.md`](https://github.com/STP-KAS/kns-spec/blob/dd07036/OVERLAY.md).
 
 ## Envelope
 
@@ -249,8 +249,8 @@ This is a handoff, not a fork of your product and not a claim that covenants alr
 
 1. **Keep inscribing with KasWare or Kastle.** KasWare: `buildScript({ type: "KNS", data })` then `submitCommitReveal`. Kastle: `commitReveal("mainnet", "kns", data)` — two popups. Reveal output 0 still pays your protocol fee address. Kastle’s high-level `commitReveal` does not document that fee output; the official inscribe tool must attach it.
 2. **Keep uniqueness on the indexer.** First valid reveal wins. Consensus will not reject a second `alice.kas`. A KIP-20 `covenant_id` is hashed from an outpoint. It does not encode the label.
-3. **Treat a Name UTXO as optional elevation.** `contracts/v1/KasName.sil` is compiled with official **Silverscript v1.0.0** (Ori, 9 Sep 2026, `3ed9733`). Own UTXO only. Continuation keeps the same sompi (fees from a sibling input). Do not `readInputState` a foreign covenant. Argent is Sutton’s multi-actor layer **above** this and is not release-ready. Notes: [BATTLETEST.md](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/BATTLETEST.md).
-4. **Add overlay profile keys** (`ipfs`, `kfs`, `contenthash`, `peer`, `onion`, `agent`, `kas`, `noise`) to Edit Profile and the Profile API. Same 1 KAS text inscriptions as website. Checklist: [CONFORMANCE.md](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/CONFORMANCE.md). Keys: [PROFILE.md](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/PROFILE.md). Schema: [schemas/overlay-records.schema.json](https://github.com/STP-KAS/kns-spec/blob/5cb0e6f/schemas/overlay-records.schema.json). Not a hard fork. Not your L2.
+3. **Treat a Name UTXO as optional elevation.** `contracts/v1/KasName.sil` is compiled with official **Silverscript v1.0.0** (Ori, 9 Sep 2026, `3ed9733`). Own UTXO only. Continuation keeps the same sompi (fees from a sibling input). Do not `readInputState` a foreign covenant. Argent is Sutton’s multi-actor layer **above** this and is not release-ready. Notes: [BATTLETEST.md](https://github.com/STP-KAS/kns-spec/blob/dd07036/BATTLETEST.md).
+4. **Add overlay profile keys** (`ipfs`, `kfs`, `contenthash`, `peer`, `onion`, `agent`, `kas`, `noise`) to Edit Profile and the Profile API. Same 1 KAS text inscriptions as website. Checklist: [CONFORMANCE.md](https://github.com/STP-KAS/kns-spec/blob/dd07036/CONFORMANCE.md). Keys: [PROFILE.md](https://github.com/STP-KAS/kns-spec/blob/dd07036/PROFILE.md). Schema: [schemas/overlay-records.schema.json](https://github.com/STP-KAS/kns-spec/blob/dd07036/schemas/overlay-records.schema.json). Not a hard fork. Not your L2.
 
 ## Two objects. Do not mix them.
 
