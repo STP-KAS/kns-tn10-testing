@@ -25,6 +25,17 @@ import { createRequire } from "node:module";
 const require = createRequire("/workspace/artifacts/kns-tn10/npm-kaspa/package.json");
 globalThis.WebSocket = require("websocket").w3cwebsocket;
 const kaspa = await import(pathToFileURL("/workspace/artifacts/kns-tn10/wasm-sdk/kaspa-wasm32-sdk/nodejs/kaspa/kaspa.js").href);
+// KNS_FEE_MULT (default 1): scale the TOTAL tx fee (priority + network) by this factor; KNS service fee outputs unchanged.
+// Build once to learn the network part, then rebuild with priorityFee = M*priority + (M-1)*network.
+const FEE_MULT = Math.max(1, Math.round(Number(process.env.KNS_FEE_MULT || "1")));
+async function createTxFee(opts) {
+  const first = await kaspa.createTransactions(opts);
+  if (FEE_MULT === 1) return first;
+  const base = BigInt(opts.priorityFee ?? 0n);
+  const net = BigInt(first.summary.fees) - base;
+  return kaspa.createTransactions({ ...opts, priorityFee: base * BigInt(FEE_MULT) + (net > 0n ? net : 0n) * BigInt(FEE_MULT - 1) });
+}
+
 try { fs.writeFileSync("/proc/self/oom_score_adj", "500"); } catch {}
 
 const OUT = "/workspace/artifacts/kns-tn10/snapshot-wallets", API_DIR = "/workspace/artifacts/kns-tn10/api";
@@ -115,7 +126,7 @@ async function createName(label, privHex) {
       const { entries } = await c.getUtxosByAddresses([payer]);
       if (!entries.length) return { ...res, error: "No UTXOs for payer" };
       entries.sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? 1 : -1));
-      const { transactions } = await kaspa.createTransactions({ priorityEntries: [], entries: entries.slice(0, 20), outputs: [{ address: p2shAddress, amount: kaspa.kaspaToSompi("1") }], changeAddress: payer, priorityFee: kaspa.kaspaToSompi("0.01"), networkId: NETWORK });
+      const { transactions } = await createTxFee({ priorityEntries: [], entries: entries.slice(0, 20), outputs: [{ address: p2shAddress, amount: kaspa.kaspaToSompi("1") }], changeAddress: payer, priorityFee: kaspa.kaspaToSompi("0.01"), networkId: NETWORK });
       for (const p of transactions) { p.sign([privateKey]); res.commitId = await p.submit(c); res.committed = true; free(p); }
       const deadline = Date.now() + 180000;
       while (Date.now() < deadline) {
@@ -129,7 +140,7 @@ async function createName(label, privHex) {
       await sleep(3000);
       const { entries: fresh } = await c.getUtxosByAddresses([payer]); fresh.sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? 1 : -1)); revealEntries = fresh.slice(0, 30);
     }
-    const { transactions: revealTxs } = await kaspa.createTransactions({ priorityEntries: [p2shEntry], entries: revealEntries, outputs: [{ address: FEE_ADDR, amount: kaspa.kaspaToSompi(String(feeKas)) }], changeAddress: payer, priorityFee: kaspa.kaspaToSompi("0.02"), networkId: NETWORK });
+    const { transactions: revealTxs } = await createTxFee({ priorityEntries: [p2shEntry], entries: revealEntries, outputs: [{ address: FEE_ADDR, amount: kaspa.kaspaToSompi(String(feeKas)) }], changeAddress: payer, priorityFee: kaspa.kaspaToSompi("0.02"), networkId: NETWORK });
     for (const p of revealTxs) {
       p.sign([privateKey], false);
       const idx = p.transaction.inputs.findIndex((inp) => !inp.signatureScript || inp.signatureScript === "");

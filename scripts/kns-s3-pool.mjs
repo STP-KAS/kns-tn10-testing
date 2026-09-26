@@ -33,6 +33,8 @@ const namesFor = (w) => (w <= 10699 ? 3 : 2);
 const NET = "testnet-10";
 const FEE = "kaspatest:qq9h47etjv6x8jgcla0ecnp8mgrkfxm70ch3k60es5a50ypsf4h6sak3g0lru";
 const API = "https://api.knsdomains.org/tn10/api/v1";
+// KNS_SKIP_INDEXER=1: no per-name indexer calls (our names are deterministic; dedupe = local artifacts + P2SH resume). Ownership verified in one pass after the window.
+const SKIP_IDX = process.env.KNS_SKIP_INDEXER === "1";
 const OUT = "/workspace/artifacts/kns-tn10/snapshot-wallets";
 const API_DIR = "/workspace/artifacts/kns-tn10/api";
 const LOG = path.join(OUT, `s3-pool-${WF}-${WT}.jsonl`);
@@ -53,6 +55,16 @@ for (const l of fs.readFileSync(meta.privkeys_file, "utf8").split("\n")) {
 }
 for (let w = WF; w <= WT; w++) if (!keys.has(w)) { console.error(`missing key for wallet ${w}`); process.exit(2); }
 
+// KNS_FEE_MULT (default 1): scale the TOTAL tx fee (priority + network) by this factor; KNS service fee outputs unchanged.
+// Build once to learn the network part, then rebuild with priorityFee = M*priority + (M-1)*network.
+const FEE_MULT = Math.max(1, Math.round(Number(process.env.KNS_FEE_MULT || "1")));
+async function createTxFee(opts) {
+  const first = await kaspa.createTransactions(opts);
+  if (FEE_MULT === 1) return first;
+  const base = BigInt(opts.priorityFee ?? 0n);
+  const net = BigInt(first.summary.fees) - base;
+  return kaspa.createTransactions({ ...opts, priorityFee: base * BigInt(FEE_MULT) + (net > 0n ? net : 0n) * BigInt(FEE_MULT - 1) });
+}
 const labelFor = (w, d) => `stp-s3-w${String(w).padStart(5, "0")}-d${d}`;
 const artifact = (label) => { try { return JSON.parse(fs.readFileSync(path.join(API_DIR, `smoke-result-${label}.json`), "utf8")); } catch { return null; } };
 
@@ -106,10 +118,12 @@ async function createOne(w, label) {
     .addData(Buffer.from("kns")).addI64(0n).addData(Buffer.from(payload)).addOp(kaspa.Opcodes.OpEndIf);
   const p2shAddress = kaspa.addressFromScriptPublicKey(script.createPayToScriptHashScript(), NET).toString();
 
+  if (!SKIP_IDX) {
   const chk = await fetchJson(`${API}/domains/check`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ domainNames: [domain], address: payer }) });
   if (!chk.json) throw new Error(`indexer_check_nonjson_http_${chk.status}`);
   const d0 = chk.json?.data?.domains?.[0];
   if (!(d0?.available === true && d0?.isReservedDomain === false)) throw new Unavailable("domain_not_available");
+  }
 
   const c = await getRpc();
   const commitLock = kaspa.kaspaToSompi("1"), priorityCommit = kaspa.kaspaToSompi("0.01");
@@ -128,7 +142,7 @@ async function createOne(w, label) {
     const { entries } = await c.getUtxosByAddresses([payer]);
     if (!entries.length) throw new Error("no_utxos");
     entries.sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? 1 : -1));
-    const { transactions } = await kaspa.createTransactions({ priorityEntries: [], entries: entries.slice(0, 20), outputs: [{ address: p2shAddress, amount: commitLock }], changeAddress: payer, priorityFee: priorityCommit, networkId: NET });
+    const { transactions } = await createTxFee({ priorityEntries: [], entries: entries.slice(0, 20), outputs: [{ address: p2shAddress, amount: commitLock }], changeAddress: payer, priorityFee: priorityCommit, networkId: NET });
     for (const p of transactions) { p.sign([privateKey]); commitId = await p.submit(c); }
     const deadline = Date.now() + 180_000;
     while (Date.now() < deadline) {
@@ -144,7 +158,7 @@ async function createOne(w, label) {
     }
     if (!p2shEntry || !revealEntries) throw new Error(`${p2shEntry ? "commit_change_timeout" : "p2sh_utxo_timeout"} commit=${commitId}`);
   }
-  const { transactions: revealTxs } = await kaspa.createTransactions({ priorityEntries: [p2shEntry], entries: revealEntries, outputs: [{ address: FEE, amount: feeSompi }], changeAddress: payer, priorityFee: priorityReveal, networkId: NET });
+  const { transactions: revealTxs } = await createTxFee({ priorityEntries: [p2shEntry], entries: revealEntries, outputs: [{ address: FEE, amount: feeSompi }], changeAddress: payer, priorityFee: priorityReveal, networkId: NET });
   let revealId;
   for (const p of revealTxs) {
     p.sign([privateKey], false);
@@ -152,7 +166,12 @@ async function createOne(w, label) {
     if (idx === -1) throw new Error("no_empty_sig_input");
     const sig = await p.createInputSignature(idx, privateKey);
     p.fillInput(idx, script.encodePayToScriptHashSignatureScript(sig));
-    revealId = await p.submit(c);
+    try { revealId = await p.submit(c); }
+    catch (e) {
+      const m = String(e?.message || e);
+      if (/Rejected transaction/i.test(m)) throw e; // definitively rejected: safe to retry (P2SH commit gets reused)
+      const u = new Error(`reveal_uncertain commit=${commitId} ${m.slice(0, 120)}`); u.revealUncertain = true; throw u;
+    }
   }
   fs.writeFileSync(path.join(API_DIR, `smoke-result-${label}.json`), JSON.stringify({ domain, payer, commitId, revealId, inscriptionId: `${revealId}i0`, feeKas: 35, p2shAddress, at: now(), via: "kns-s3-pool" }, null, 2) + "\n");
   // wait until the reveal is accepted (spent P2SH outpoint gone, reveal change visible) before this wallet's next commit
@@ -199,6 +218,7 @@ async function doWallet(id, w) {
           rec({ phase: "created", ok: true, lane: id, wallet: w, label, attempt, round, revealId: r.revealId, commitId: r.commitId, reused: r.reused, ms: Date.now() - t0 });
           summary.ok++; ok = true; break rounds;
         } catch (e) {
+            if (e?.revealUncertain) { rec({ phase: "reveal_uncertain", ok: false, lane: id, wallet: w, label, error: String(e.message).slice(0, 200) }); try { fs.appendFileSync(path.join(API_DIR, "..", "snapshot-wallets", "reveal-uncertain-2026-09-26.jsonl"), JSON.stringify({ at: now(), label, wallet: w, error: String(e.message).slice(0, 200) }) + "\n"); } catch {} summary.reveal_uncertain = (summary.reveal_uncertain || 0) + 1; ok = true; break rounds; }
           if (rpc && !rpc.isConnected) rpc = null;
           if (e instanceof Unavailable) {
             const o = await indexerOwner(label);

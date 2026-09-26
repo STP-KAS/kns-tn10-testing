@@ -31,7 +31,7 @@ for (;;) {
   save({ state: "pass_running", waiting_for: [] });
   const code = await new Promise((res) => {
     const fd = fs.openSync(LOG, "a");
-    const c = spawn(process.execPath, [`${SCRIPTS}/treasury-fund-r1.mjs`], { cwd: SCRIPTS, stdio: ["ignore", fd, fd] });
+    const c = spawn(process.execPath, [`${SCRIPTS}/treasury-fund-r1.mjs`, "--floor-tkas", String(process.env.R1_FLOOR_TKAS || "20000")], { cwd: SCRIPTS, stdio: ["ignore", fd, fd] });
     const kill = setTimeout(() => { try { c.kill("SIGTERM"); } catch {} }, 90 * 60000);
     c.on("close", (code) => { clearTimeout(kill); fs.closeSync(fd); res(code); });
   });

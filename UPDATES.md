@@ -2,6 +2,13 @@
 
 Newest first. Times Europe/Brussels.
 
+## 26 Sep 2026 ~20:12 CEST
+
+- Nightly refresh: [results/inscriptions.csv](results/inscriptions.csv) and README results now **124,586** creates with reveal tx (smoke 1, bulk 1,518, Phase A 69,856, S3 50,000, R1 3,211). Newest create 09:51 CEST (`stp-bulk-1518`). Sources: CSV run column; S3 pool `s3-status-pool-700-20699.json`; Phase A `phase-a-status*.json`; R1 `desk-fund-r1-status.json` / `r1-done/` (3,211).
+- ~07:43–09:51 CEST: fast stress relaunch (user instruction) superseded the 25 Sep slow-pace cap. Fee multiplier 7× (`KNS_FEE_MULT=7`), indexer pre-check skipped during the window (`KNS_SKIP_INDEXER=1`), pools scaled up then backed off. S3 **hit its 50,000 target**; Phase A reached 69,856 across 699 wallets. Marker: `snapshot-wallets/FAST-RELAUNCH-ACTIVE`.
+- Ownership verify (read-only, post-window): **79,764 / 79,764** storm-day names owned by expected payer, 0 missing / 0 other (`ownership-verify-summary-2026-09-26.json`).
+- Added/updated sanitized scripts from the stress window: `kns-s3-pool.mjs`, `kns-snap-pool.mjs`, `kns-snap-r1.mjs`, `kns-smoke-create.mjs` (fee mult + stranded P2SH reuse), `kns-slow-runner.sh` / `kns-stop-fast.sh` (FAST-RELAUNCH guard), `r1-fund-loop.mjs`, plus helpers `scale-relaunch.sh`, `treasury-balance.mjs`, `treasury-halt-watch.sh`, `indexer-lag-sampler.sh`, `explorer-snap.sh`, `cdp.py`, `ownership_verify_storm_2026_09_26.py`.
+
 ## 25 Sep 2026 ~20:13
 
 - Nightly refresh: [results/inscriptions.csv](results/inscriptions.csv) and README results now **44,812** creates with reveal tx (smoke 1, bulk 1,341, Phase A 28,837, S3 13,723, R1 910). Newest create 20:07 CEST (`stp-s3-w01013-d2`). Slow S3 runner still going (≤2 creates / 10 min).

@@ -34,6 +34,8 @@ if (!BROADCAST) { console.error("pool requires --broadcast 1"); process.exit(2);
 const NET = "testnet-10";
 const FEE = "kaspatest:qq9h47etjv6x8jgcla0ecnp8mgrkfxm70ch3k60es5a50ypsf4h6sak3g0lru";
 const API = "https://api.knsdomains.org/tn10/api/v1";
+// KNS_SKIP_INDEXER=1: no per-name indexer calls (our names are deterministic; dedupe = local artifacts + P2SH resume). Ownership verified in one pass after the window.
+const SKIP_IDX = process.env.KNS_SKIP_INDEXER === "1";
 const OUT = "/workspace/artifacts/kns-tn10/snapshot-wallets";
 const API_DIR = "/workspace/artifacts/kns-tn10/api";
 const LOG = path.join(OUT, `phase-a-pool-${WF}-${WT}.jsonl`);
@@ -49,6 +51,16 @@ const keys = new Map();
 for (const l of fs.readFileSync(meta.privkeys_file, "utf8").trim().split("\n")) { const j = JSON.parse(l); if (j.index >= WF && j.index <= WT) keys.set(j.index, j); }
 for (let w = WF; w <= WT; w++) if (!keys.has(w)) { console.error(`missing key for wallet ${w}`); process.exit(2); }
 
+// KNS_FEE_MULT (default 1): scale the TOTAL tx fee (priority + network) by this factor; KNS service fee outputs unchanged.
+// Build once to learn the network part, then rebuild with priorityFee = M*priority + (M-1)*network.
+const FEE_MULT = Math.max(1, Math.round(Number(process.env.KNS_FEE_MULT || "1")));
+async function createTxFee(opts) {
+  const first = await kaspa.createTransactions(opts);
+  if (FEE_MULT === 1) return first;
+  const base = BigInt(opts.priorityFee ?? 0n);
+  const net = BigInt(first.summary.fees) - base;
+  return kaspa.createTransactions({ ...opts, priorityFee: base * BigInt(FEE_MULT) + (net > 0n ? net : 0n) * BigInt(FEE_MULT - 1) });
+}
 const labelFor = (w, d) => `stp-snap-w${String(w).padStart(3, "0")}-d${String(d).padStart(3, "0")}`;
 const artifact = (label) => { try { return JSON.parse(fs.readFileSync(path.join(API_DIR, `smoke-result-${label}.json`), "utf8")); } catch { return null; } };
 
@@ -105,10 +117,12 @@ async function createOne(w, label) {
     .addData(Buffer.from("kns")).addI64(0n).addData(Buffer.from(payload)).addOp(kaspa.Opcodes.OpEndIf);
   const p2shAddress = kaspa.addressFromScriptPublicKey(script.createPayToScriptHashScript(), NET).toString();
 
+  if (!SKIP_IDX) {
   const chk = await fetchJson(`${API}/domains/check`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ domainNames: [domain], address: payer }) });
   if (!chk.json) throw new Error(`indexer_check_nonjson_http_${chk.status}`);
   const d0 = chk.json?.data?.domains?.[0];
   if (!(d0?.available === true && d0?.isReservedDomain === false)) throw new Error("domain_not_available");
+  }
 
   const c = await getRpc();
   const commitLock = kaspa.kaspaToSompi("1"), priorityCommit = kaspa.kaspaToSompi("0.01");
@@ -122,7 +136,7 @@ async function createOne(w, label) {
     const { entries } = await c.getUtxosByAddresses([payer]);
     if (!entries.length) throw new Error("no_utxos");
     entries.sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? 1 : -1));
-    const { transactions } = await kaspa.createTransactions({ priorityEntries: [], entries: entries.slice(0, 20), outputs: [{ address: p2shAddress, amount: commitLock }], changeAddress: payer, priorityFee: priorityCommit, networkId: NET });
+    const { transactions } = await createTxFee({ priorityEntries: [], entries: entries.slice(0, 20), outputs: [{ address: p2shAddress, amount: commitLock }], changeAddress: payer, priorityFee: priorityCommit, networkId: NET });
     for (const p of transactions) { p.sign([privateKey]); commitId = await p.submit(c); }
     const deadline = Date.now() + 180_000;
     while (Date.now() < deadline) {
@@ -134,7 +148,7 @@ async function createOne(w, label) {
   }
   const { entries: fresh } = await c.getUtxosByAddresses([payer]);
   fresh.sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? 1 : -1));
-  const { transactions: revealTxs } = await kaspa.createTransactions({ priorityEntries: [p2shEntry], entries: fresh.slice(0, 30), outputs: [{ address: FEE, amount: feeSompi }], changeAddress: payer, priorityFee: priorityReveal, networkId: NET });
+  const { transactions: revealTxs } = await createTxFee({ priorityEntries: [p2shEntry], entries: fresh.slice(0, 30), outputs: [{ address: FEE, amount: feeSompi }], changeAddress: payer, priorityFee: priorityReveal, networkId: NET });
   let revealId;
   for (const p of revealTxs) {
     p.sign([privateKey], false);
@@ -142,7 +156,12 @@ async function createOne(w, label) {
     if (idx === -1) throw new Error("no_empty_sig_input");
     const sig = await p.createInputSignature(idx, privateKey);
     p.fillInput(idx, script.encodePayToScriptHashSignatureScript(sig));
-    revealId = await p.submit(c);
+    try { revealId = await p.submit(c); }
+    catch (e) {
+      const m = String(e?.message || e);
+      if (/Rejected transaction/i.test(m)) throw e; // definitively rejected: safe to retry (P2SH commit gets reused)
+      const u = new Error(`reveal_uncertain commit=${commitId} ${m.slice(0, 120)}`); u.revealUncertain = true; throw u;
+    }
   }
   fs.writeFileSync(path.join(API_DIR, `smoke-result-${label}.json`), JSON.stringify({ domain, payer, commitId, revealId, inscriptionId: `${revealId}i0`, feeKas: priceKas(label), p2shAddress, at: now(), via: "kns-snap-pool" }, null, 2) + "\n");
   // wait until the reveal is accepted (P2SH UTXO consumed) so the next commit never races unconfirmed spends
@@ -166,7 +185,7 @@ async function lane(id, a, b) {
     for (let d = DF; d <= DT && !stopping; d++) {
       const label = labelFor(w, d);
       if (artifact(label)?.revealId) { summary.skipped++; continue; }
-      const idx = await indexerOwner(label);
+      const idx = SKIP_IDX ? null : await indexerOwner(label);
       if (idx?.registered) {
         const mine = idx.owner === keys.get(w).address;
         rec({ phase: mine ? "skip_exists_indexer" : "skip_taken_other", lane: id, wallet: w, domain: d, label, owner: idx.owner });
@@ -184,10 +203,11 @@ async function lane(id, a, b) {
             rec({ phase: "created", ok: true, lane: id, wallet: w, domain: d, label, attempt, round, revealId: r.revealId, commitId: r.commitId, resumed: r.resumed, ms: Date.now() - t0 });
             ok = true; break rounds;
           } catch (e) {
+            if (e?.revealUncertain) { rec({ phase: "reveal_uncertain", ok: false, lane: id, wallet: w, label, error: String(e.message).slice(0, 200) }); try { fs.appendFileSync(path.join(API_DIR, "..", "snapshot-wallets", "reveal-uncertain-2026-09-26.jsonl"), JSON.stringify({ at: now(), label, wallet: w, error: String(e.message).slice(0, 200) }) + "\n"); } catch {} summary.reveal_uncertain = (summary.reveal_uncertain || 0) + 1; ok = true; break rounds; }
             summary.inflight--;
             lastErr = String(e?.message || e).slice(0, 200);
             if (rpc && !rpc.isConnected) rpc = null; // shared client dropped: next getRpc() reconnects (never disconnect a live shared client)
-            const again = await indexerOwner(label);
+            const again = SKIP_IDX ? null : await indexerOwner(label);
             if (again?.registered && again.owner === keys.get(w).address) { rec({ phase: "created", ok: true, lane: id, wallet: w, domain: d, label, attempt, round, note: "registered_per_indexer", ms: Date.now() - t0 }); ok = true; break rounds; }
             summary.failed_attempts++;
             rec({ phase: "attempt_failed", ok: false, lane: id, wallet: w, domain: d, label, attempt, round, error: lastErr, ms: Date.now() - t0 });
@@ -206,8 +226,12 @@ async function lane(id, a, b) {
   out({ phase: "lane_done", lane: id, range: `${a}-${b}`, stopping });
 }
 
-const n = WT - WF + 1, per = Math.ceil(n / LANES);
-const ranges = []; for (let a = WF; a <= WT; a += per) ranges.push([a, Math.min(WT, a + per - 1)]);
+// split into LANES contiguous ranges with ~equal REMAINING names (fully-done wallets excluded from the weight)
+const pend = []; let totalPending = 0;
+for (let w = WF; w <= WT; w++) { let p = 0; for (let d = DF; d <= DT; d++) if (!fs.existsSync(path.join(API_DIR, `smoke-result-${labelFor(w, d)}.json`))) p++; pend.push(p); totalPending += p; }
+const target = Math.max(1, totalPending / LANES);
+const ranges = []; { let a = WF, acc = 0; for (let w = WF; w <= WT; w++) { acc += pend[w - WF]; if ((acc >= target && ranges.length < LANES - 1) || w === WT) { ranges.push([a, w]); a = w + 1; acc = 0; } } }
+out({ phase: "lane_split", total_pending: totalPending, per_lane_target: Math.round(target), lanes: ranges.length });
 out({ phase: "pool_start", range: `${WF}-${WT}`, lanes: ranges.map((r) => r.join("-")), delayMs: DELAY, retries: RETRIES });
 saveStatus({ lane_ranges: ranges.map((r) => r.join("-")) });
 const hb = setInterval(() => saveStatus({ lane_ranges: ranges.map((r) => r.join("-")), rss_mb: Math.round(process.memoryUsage().rss / 1048576) }), 30000);

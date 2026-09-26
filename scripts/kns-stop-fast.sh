@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# --- guard (26 Sep): a fast relaunch is active on explicit user instruction; do not re-throttle without a new one
+if [ -f /workspace/artifacts/kns-tn10/snapshot-wallets/FAST-RELAUNCH-ACTIVE ] && [ "${ALLOW_SLOW_SWITCH:-0}" != 1 ]; then
+  echo "REFUSE: FAST-RELAUNCH-ACTIVE (user 26 Sep 07:43: relaunch + 7x fees). Set ALLOW_SLOW_SWITCH=1 only on a new explicit user instruction."; exit 9
+fi
 # Gracefully stop ALL fast KNS TN10 create runners (never SIGKILL, never mid commit/reveal), pid-agnostic.
 #   kns-stop-fast.sh --dry-run   show what would be signalled (sends nothing)
 #   kns-stop-fast.sh             do it, then wait (up to STOP_WAIT_S, default 900 s) until no create process remains

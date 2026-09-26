@@ -130,11 +130,25 @@ console.log(
   })
 );
 
+// KNS_FEE_MULT (default 1): scale the TOTAL tx fee (priority + network) by this factor; KNS service fee outputs unchanged.
+// Build once to learn the network part, then rebuild with priorityFee = M*priority + (M-1)*network.
+const FEE_MULT = Math.max(1, Math.round(Number(process.env.KNS_FEE_MULT || "1")));
+async function createTxFee(opts) {
+  const first = await kaspa.createTransactions(opts);
+  if (FEE_MULT === 1) return first;
+  const base = BigInt(opts.priorityFee ?? 0n);
+  const net = BigInt(first.summary.fees) - base;
+  return kaspa.createTransactions({ ...opts, priorityFee: base * BigInt(FEE_MULT) + (net > 0n ? net : 0n) * BigInt(FEE_MULT - 1) });
+}
 const commitLock = kaspa.kaspaToSompi("1");
 const priorityCommit = kaspa.kaspaToSompi("0.01");
 const feeSompi = kaspa.kaspaToSompi(String(feeKas));
 const priorityReveal = kaspa.kaspaToSompi("0.02");
 
+// Reuse a stranded commit (P2SH UTXO left by an earlier failed attempt) instead of committing again.
+const { entries: preP2 } = await rpc.getUtxosByAddresses([p2shAddress]);
+const reuseP2sh = preP2 && preP2.length ? preP2[0] : null;
+if (reuseP2sh) console.log(JSON.stringify({ phase: "reuse_p2sh", outpoint: reuseP2sh.outpoint }));
 const { entries } = await rpc.getUtxosByAddresses([payer]);
 if (!entries.length) {
   console.error("No UTXOs for payer");
@@ -145,7 +159,7 @@ if (!entries.length) {
 entries.sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? 1 : -1));
 const commitEntries = entries.slice(0, 20);
 
-const { transactions: commitTxs } = await kaspa.createTransactions({
+const { transactions: commitTxs } = await createTxFee({
   priorityEntries: [],
   entries: commitEntries,
   outputs: [{ address: p2shAddress, amount: commitLock }],
@@ -155,7 +169,7 @@ const { transactions: commitTxs } = await kaspa.createTransactions({
 });
 
 let commitId;
-for (const pending of commitTxs) {
+for (const pending of (reuseP2sh ? [] : commitTxs)) {
   pending.sign([privateKey]);
   commitId = await pending.submit(rpc);
   console.log(JSON.stringify({ phase: "commit", txid: commitId }));
@@ -166,8 +180,9 @@ let p2shEntry = null;
 const deadline = Date.now() + 180_000;
 while (Date.now() < deadline) {
   const { entries: p2 } = await rpc.getUtxosByAddresses([p2shAddress]);
-  if (p2 && p2.length) {
-    p2shEntry = p2[0];
+  const hit = reuseP2sh ? p2 && p2[0] : p2 && p2.find((e) => e.outpoint.transactionId === commitId);
+  if (hit) {
+    p2shEntry = hit;
     break;
   }
   await new Promise((r) => setTimeout(r, 2000));
@@ -188,7 +203,7 @@ console.log(
 const { entries: fresh } = await rpc.getUtxosByAddresses([payer]);
 fresh.sort((a, b) => (BigInt(a.amount) < BigInt(b.amount) ? 1 : -1));
 
-const { transactions: revealTxs } = await kaspa.createTransactions({
+const { transactions: revealTxs } = await createTxFee({
   priorityEntries: [p2shEntry],
   entries: fresh.slice(0, 30),
   outputs: [{ address: FEE, amount: feeSompi }],
@@ -237,11 +252,14 @@ fs.writeFileSync(
 let owner = null;
 for (let i = 0; i < 30; i++) {
   await new Promise((r) => setTimeout(r, 3000));
-  const r = await fetch(`${API}/${encodeURIComponent(domain)}/owner`);
+  let r;
+  try { r = await fetch(`${API}/${encodeURIComponent(domain)}/owner`, { signal: AbortSignal.timeout(10000) }); } catch { continue; }
   if (r.status === 200) {
     owner = await r.json();
     break;
   }
+  // Indexer lagging behind the DAG (HTTP 500 "NG is lagging"): don't block the chain waiting for it.
+  if (r.status >= 500) { const t = await r.text().catch(() => ""); if (/lagging/i.test(t)) { owner = { lagging: true, message: t.slice(0, 200) }; break; } }
 }
 console.log(
   JSON.stringify({

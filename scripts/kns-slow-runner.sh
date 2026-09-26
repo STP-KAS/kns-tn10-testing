@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# --- guard (26 Sep): a fast relaunch is active on explicit user instruction; do not re-throttle without a new one
+if [ -f /workspace/artifacts/kns-tn10/snapshot-wallets/FAST-RELAUNCH-ACTIVE ] && [ "${ALLOW_SLOW_SWITCH:-0}" != 1 ]; then
+  echo "REFUSE: FAST-RELAUNCH-ACTIVE (user 26 Sep 07:43: relaunch + 7x fees). Set ALLOW_SLOW_SWITCH=1 only on a new explicit user instruction."; exit 9
+fi
 # KNS TN10 SLOW runner: continues the S3 queue (stp-s3-w{700..20699}-d{n}, snapshot wallets, all funded) at
 # <= 2 domain creates per rolling 10 minutes, by exec'ing the existing kns-s3-pool.mjs with ONE lane and a
 # 300 s pause after every name. Resume state = api/smoke-result-<label>.json (labels with a revealId are skipped);

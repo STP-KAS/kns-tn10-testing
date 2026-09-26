@@ -140,18 +140,18 @@ Run notes: [Phase A](docs/runs/SNAPSHOT-PHASE-A.md), [S3](docs/runs/S3.md), [R1]
 
 ## Results so far
 
-Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **25 Sep 2026 20:07 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. The slow S3 runner was still going at export time, so these numbers are a floor.
+Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **26 Sep 2026 20:12 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. Newest create in the export: `stp-bulk-1518.kas` at 09:51 CEST.
 
 | Run | Creates with reveal tx | Notes |
 | --- | --- | --- |
 | Smoke | 1 | `stp-smoke-1789839537.kas`, 19 Sep ~19:45 CEST, indexer owner matched |
-| Bulk | 1,341 | `stp-bulk-0001`–`1341`, no gaps. Target 3,000. Fast bulk stopped at the ~02:00 slow-pace switch |
-| Snapshot Phase A | 28,837 | across 357 wallets; 248 wallets have all 100. Stopped at the ~02:00 slow-pace switch |
-| S3 | 13,723 | across 5,481 wallets; target 50,000. One slow runner continues (≤2 creates / 10 min) |
-| R1 | 910 | incl. 119 three-char (2,100 tKAS) and 122 four-char (525 tKAS). 910 of 5,000 wallets funded (`desk-fund-r1-status.json`). Stopped at the ~02:00 slow-pace switch |
-| **Total** | **44,812** | |
+| Bulk | 1,518 | `stp-bulk-0001`–`1518`, no gaps. Target 3,000. Source: `results/inscriptions.csv` run=`bulk` |
+| Snapshot Phase A | 69,856 | across 699 wallets; 698 wallets have all 100. Source: run=`snapshot-phase-a`; pool status `phase-a-status-pool-7-699.json` / `phase-a-status.json` |
+| S3 | 50,000 | across 20,000 wallets; **target 50,000 hit**. Source: run=`s3`; `s3-status-pool-700-20699.json` (`ok` 26,301 this window + prior) |
+| R1 | 3,211 | incl. 430 three-char (2,100 tKAS) and 444 four-char (525 tKAS). 3,211 of 5,000 wallets funded (`desk-fund-r1-status.json` `funded_total`; `r1-done/` 3,211). Source: run=`r1` |
+| **Total** | **124,586** | |
 
-Indexer check: 23 Sep, `stp-bulk-0001`–`0750` all returned an owner from the TN10 indexer (750/750, [older repo](https://github.com/STP-KAS/kns-kasware-tn10-test)). Names after that were not re-checked for this publication.
+Indexer / ownership: 23 Sep, `stp-bulk-0001`–`0750` all returned an owner (750/750, [older repo](https://github.com/STP-KAS/kns-kasware-tn10-test)). After the 26 Sep stress window, a read-only ownership verify over the **79,764** names created that day (`ownership_verify_storm_2026_09_26.py`) reported **owned_expected 79,764 / missing 0 / owned_other 0** (`ownership-verify-summary-2026-09-26.json`; `/owner` was tip-lag blocked so `/assets` was used).
 
 Findings ([docs/FINDINGS-DRAFT.md](docs/FINDINGS-DRAFT.md), run notes):
 
