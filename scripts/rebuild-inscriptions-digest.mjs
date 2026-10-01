@@ -142,7 +142,7 @@ try {
   const createLine = ps
     .split('\n')
     .find((l) => /kns-bulk-create\.mjs/.test(l) && /--from/.test(l));
-  const chainLine = ps.split('\n').find((l) => /kns-bulk-chain-resume/.test(l));
+  const chainLine = ps.split('\n').find((l) => /kns-bulk-chain-resume/.test(l) && !/pgrep|\/bin\/sh -c/.test(l)); // ignore our own pgrep shell
   if (createLine) {
     const from = (createLine.match(/--from\s+(\d+)/) || [])[1];
     const to = (createLine.match(/--to\s+(\d+)/) || [])[1];

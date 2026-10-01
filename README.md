@@ -29,6 +29,7 @@ What was tested on TN10 (all scripted, no wallet UI):
 | Snapshot Phase A | `stp-snap-w###-d###`, wallets 0–699, up to 100 names each | many distinct derived addresses | `kns-snap-smoke.mjs`, `kns-snap-phase-a.mjs`, `kns-snap-pool.mjs`, `phase-a-*.sh` |
 | S3 | `stp-s3-w#####-d#`, wallets 700–20699, 3 or 2 names each (50,000 target) | one name per child process | `kns-snap-s3.mjs`, `kns-s3-create.mjs`, `s3-supervisor.mjs` |
 | R1 | one random name, length 3–10, per wallet 20700–25699 (5,000 target) | includes 3- and 4-char fee tiers | `gen-r1-names.mjs`, `kns-snap-r1.mjs`, `r1-supervisor.sh` |
+| Storm (prepared 1 Oct) | random 5–10 char labels until leftover snapshot funds exhaust (not started) | leftover balances on snapshot wallets only; default payer-mode | `kns-storm-runner.mjs`, `kns-storm-start.sh`, `kns-storm-stop.sh`, `kns-storm-funds-inventory.mjs` |
 
 APIs used:
 
@@ -138,9 +139,13 @@ Run notes: [Phase A](docs/runs/SNAPSHOT-PHASE-A.md), [S3](docs/runs/S3.md), [R1]
 - `node scripts/rebuild-inscriptions-digest.mjs` rebuilds the digest from `api/smoke-result-*.json`.
 - `python3 scripts/export-results-csv.py` writes [results/inscriptions.csv](results/inscriptions.csv) (public fields only; refuses files with unexpected fields).
 
+### 8. Storm runner (prepared 1 Oct 2026, not started)
+
+Leftover snapshot-wallet tKAS only (treasury address hard-blocked). Default `--owner-mode payer` (proven 26 Sep). Broadcast needs `./kns-storm-start.sh GO` (`KNS_STORM_GO=1`). Offline: `node scripts/kns-storm-runner.mjs --dry-run N`. Notes: [docs/runs/STORM-2026-10-01.md](docs/runs/STORM-2026-10-01.md).
+
 ## Results so far
 
-Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **26 Sep 2026 20:12 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. Newest create in the export: `stp-bulk-1518.kas` at 09:51 CEST.
+Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **1 Oct 2026 20:21 CEST** (re-export; totals unchanged since 26 Sep). Each row has a commit tx id and a reveal tx id recorded by the create script. Newest create in the export: `stp-bulk-1518.kas` at 09:51 CEST 26 Sep.
 
 | Run | Creates with reveal tx | Notes |
 | --- | --- | --- |

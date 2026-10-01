@@ -2,6 +2,12 @@
 
 Newest first. Times Europe/Brussels.
 
+## 1 Oct 2026 ~20:21 CEST
+
+- Nightly refresh: [results/inscriptions.csv](results/inscriptions.csv) still **124,586** creates with reveal tx (smoke 1, bulk 1,518, Phase A 69,856, S3 50,000, R1 3,211). Newest create unchanged: `stp-bulk-1518` 26 Sep 09:51 CEST. Sources: CSV run column; digest `api/inscriptions-digest-compact.txt` (`count` 124586); R1 `r1-done/` 3,211. No new creates since the 26 Sep stress stop.
+- Storm runner **prepared, not started** (broadcast off). Offline dry-runs finished under `storm-2026-10-01/` (leftover snapshot-wallet funds only; treasury address hard-blocked as input). Payer-mode exhaustion dry-run: **9,511** built / 0 build failures / all signed (`dryrun-exhaustion-payer-mode-status.json`, `used_labels_loaded` 124586, `broadcast` false). Split-mode exhaustion (opt-in, attribution unproven): 17,816 built (`dryrun-exhaustion-split-mode-status.json`). Funds snapshot 1 Oct 18:42 CEST: **652,695.45** tKAS across 23,931 wallets with balance (`funds-summary.json`). Run notes: [docs/runs/STORM-2026-10-01.md](docs/runs/STORM-2026-10-01.md).
+- Added/updated sanitized scripts: `kns-storm-runner.mjs`, `kns-storm-start.sh`, `kns-storm-stop.sh`, `kns-storm-summary.mjs`, `kns-storm-funds-inventory.mjs`; minor `rebuild-inscriptions-digest.mjs` fix (ignore own pgrep shell when detecting chain-resume).
+
 ## 26 Sep 2026 ~20:12 CEST
 
 - Nightly refresh: [results/inscriptions.csv](results/inscriptions.csv) and README results now **124,586** creates with reveal tx (smoke 1, bulk 1,518, Phase A 69,856, S3 50,000, R1 3,211). Newest create 09:51 CEST (`stp-bulk-1518`). Sources: CSV run column; S3 pool `s3-status-pool-700-20699.json`; Phase A `phase-a-status*.json`; R1 `desk-fund-r1-status.json` / `r1-done/` (3,211).
