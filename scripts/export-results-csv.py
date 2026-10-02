@@ -13,12 +13,21 @@ import csv, glob, json, os, sys
 src = sys.argv[1] if len(sys.argv) > 1 else "/workspace/artifacts/kns-tn10"
 out = sys.argv[2] if len(sys.argv) > 2 else "results/inscriptions.csv"
 FIELDS = ["domain", "run", "payer_address", "commit_txid", "reveal_txid", "inscription_id", "fee_tkas", "created_at_utc"]
-ALLOWED = {"domain", "payer", "commitId", "revealId", "inscriptionId", "feeKas", "p2shAddress", "at", "via", "run"}
+# owner / run_id are public fields written by kns-storm-runner (2026-10-01+); kept out of CSV columns.
+ALLOWED = {
+    "domain", "payer", "commitId", "revealId", "inscriptionId", "feeKas",
+    "p2shAddress", "at", "via", "run", "owner", "run_id",
+}
 
 def run_of(d, j):
     for p, r in (("stp-bulk-", "bulk"), ("stp-snap-", "snapshot-phase-a"), ("stp-s3-", "s3"), ("stp-smoke-", "smoke")):
         if d.startswith(p):
             return r
+    if j.get("run_id"):
+        return j["run_id"]
+    # First storm run (1 Oct evening) wrote via=kns-storm-runner before run_id existed.
+    if j.get("via") == "kns-storm-runner":
+        return "storm-2026-10-01"
     return j.get("run") or "other"
 
 rows = []

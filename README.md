@@ -145,18 +145,23 @@ Leftover snapshot-wallet tKAS only (treasury address hard-blocked). Default `--o
 
 ## Results so far
 
-Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **1 Oct 2026 20:21 CEST** (re-export; totals unchanged since 26 Sep). Each row has a commit tx id and a reveal tx id recorded by the create script. Newest create in the export: `stp-bulk-1518.kas` at 09:51 CEST 26 Sep.
+Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **2 Oct 2026 ~20:16 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. Newest create in the export: `eukjsfzxl.kas` at 12:52:59 CEST 2 Oct (`run=funded-2026-10-02`).
 
 | Run | Creates with reveal tx | Notes |
 | --- | --- | --- |
 | Smoke | 1 | `stp-smoke-1789839537.kas`, 19 Sep ~19:45 CEST, indexer owner matched |
-| Bulk | 1,518 | `stp-bulk-0001`–`1518`, no gaps. Target 3,000. Source: `results/inscriptions.csv` run=`bulk` |
-| Snapshot Phase A | 69,856 | across 699 wallets; 698 wallets have all 100. Source: run=`snapshot-phase-a`; pool status `phase-a-status-pool-7-699.json` / `phase-a-status.json` |
-| S3 | 50,000 | across 20,000 wallets; **target 50,000 hit**. Source: run=`s3`; `s3-status-pool-700-20699.json` (`ok` 26,301 this window + prior) |
-| R1 | 3,211 | incl. 430 three-char (2,100 tKAS) and 444 four-char (525 tKAS). 3,211 of 5,000 wallets funded (`desk-fund-r1-status.json` `funded_total`; `r1-done/` 3,211). Source: run=`r1` |
-| **Total** | **124,586** | |
+| Bulk | 1,518 | `stp-bulk-0001`–`1518`, no gaps. Target 3,000. Source: CSV `run=bulk` |
+| Snapshot Phase A | 69,856 | across 699 wallets; 698 wallets have all 100. Source: CSV `run=snapshot-phase-a`; `phase-a-status-pool-7-699.json` |
+| S3 | 50,000 | across 20,000 wallets; target hit. Source: CSV `run=s3`; `s3-status-pool-700-20699.json` |
+| R1 | 3,211 | 3,211 of 5,000 wallets funded (`desk-fund-r1-status.json`; `r1-done/` 3,211). Source: CSV `run=r1` |
+| Storm (1 Oct) | 9,509 | Snapshot leftover funds, payer-mode, ramped to 3,600/min, `funds_exhausted`. Source: CSV `run=storm-2026-10-01`; `storm-2026-10-01/final-summary.json` (`names_ok_this_run` 9509). Notes: [docs/runs/STORM-2026-10-01.md](docs/runs/STORM-2026-10-01.md) |
+| Blueprint | 8,258 | Fresh 1,000-wallet set after storm sweep. Source: CSV `run=blueprint-2026-10-01`; `blueprint-2026-10-01/final-summary.json`. [BLUEPRINT-2026-10-01.md](docs/runs/BLUEPRINT-2026-10-01.md) |
+| Blueprint2 | 757 | Fresh 100-wallet set; `--sweep-smalls 6`. Source: CSV `run=blueprint2-2026-10-01`; `blueprint2-2026-10-01/final-summary.json` |
+| Dust | 58 | Blueprint2 dust consolidated to 6 wallets (2 Oct morning). Source: CSV `run=dust-2026-10-02`; `dust-2026-10-02/final-summary.json` |
+| Funded (2 Oct) | 11,400 | Fresh 100-wallet set + fan-out; 180/min until exhausted. Source: CSV `run=funded-2026-10-02`; `funded-2026-10-02/final-summary.json`. [FUNDED-2026-10-02.md](docs/runs/FUNDED-2026-10-02.md) |
+| **Total** | **154,568** | |
 
-Indexer / ownership: 23 Sep, `stp-bulk-0001`–`0750` all returned an owner (750/750, [older repo](https://github.com/STP-KAS/kns-kasware-tn10-test)). After the 26 Sep stress window, a read-only ownership verify over the **79,764** names created that day (`ownership_verify_storm_2026_09_26.py`) reported **owned_expected 79,764 / missing 0 / owned_other 0** (`ownership-verify-summary-2026-09-26.json`; `/owner` was tip-lag blocked so `/assets` was used).
+Indexer / ownership: 23 Sep, `stp-bulk-0001`–`0750` all returned an owner (750/750, [older repo](https://github.com/STP-KAS/kns-kasware-tn10-test)). After the 26 Sep stress window, a read-only ownership verify over the **79,764** names created that day (`ownership_verify_storm_2026_09_26.py`) reported **owned_expected 79,764 / missing 0 / owned_other 0** (`ownership-verify-summary-2026-09-26.json`; `/owner` was tip-lag blocked so `/assets` was used). After the 1–2 Oct storm/blueprint runs, read-only `/assets` verify reported **9,509 + 8,258 + 757** expected / 0 missing / 0 wrong (`_ownership_verify_2026-10-01/combined-report.json`). Funded/dust journals report `owner_eq_payer_all` true (no separate indexer pass recorded for those two).
 
 Findings ([docs/FINDINGS-DRAFT.md](docs/FINDINGS-DRAFT.md), run notes):
 

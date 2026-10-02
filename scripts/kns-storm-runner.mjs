@@ -11,6 +11,16 @@
  * - Rate param --rate (default 30/min); hard cap 30 names/min (sliding 60 s window). STOP file => graceful drain + exit.
  * - Broadcast requires BOTH `--broadcast 1` AND env KNS_STORM_GO=1. Otherwise only --dry-run N (build+sign, never submit).
  * Never prints keys.
+ *
+ * Rebuilt 2026-10-02 (box rebuild lost the 1 Oct working copy) from GitHub STP-KAS/kns-tn10-testing@ee3e013, re-adding:
+ *   --run-dir <abs|rel> / --run-id / --wallet-meta <meta.json> / --snapshot <utxo view>: separate run folders and wallet sets
+ *   live fee: mass * ceil(--feerate-margin (1.2) * live storm feerate from --feerate-file (/tmp/r6-feerate, <120 s old));
+ *     if the file is missing/stale: n0 getFeeEstimate, feerate = max(priority, 2 x normal) (storm pays flat 2x) * margin; last resort 4x fee
+ *   control.json in the run dir (re-read every 2 s): rate_per_min, max_inflight, wallet_cooldown_ms, max_unconfirmed, busy_wait_ms
+ *   --max-unconfirmed (watched txs not yet out of n0 mempool), HARD_CAP 6000/min
+ *   --sweep-smalls K (default 0): payer mode recycles up to K smallest UTXOs (reveal change) per commit; wallets with >16 UTXOs stay usable
+ *   --busy-wait-ms (default 5000 = previous behaviour): retry wait after "all wallets busy"
+ *   --dry-feerate N: offline dry-run uses this live feerate (no network)
  */
 import fs from "node:fs"; import path from "node:path"; import crypto from "node:crypto";
 import { pathToFileURL } from "node:url"; import { createRequire } from "node:module";
@@ -20,23 +30,31 @@ const kaspa = await import(pathToFileURL("/workspace/artifacts/kns-tn10/wasm-sdk
 
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : d; };
 const BASE_DIR = "/workspace/artifacts/kns-tn10/storm-2026-10-01";
-// --mock 1: exercises the LIVE loop against a fake in-process node (no network at all), outputs to mock-run/, no smoke-result files.
+// --mock 1: exercises the LIVE loop against a fake in-process node (no network at all), outputs to <run-dir>/mock-run/, no smoke-result files.
 const MOCK = arg("--mock", "0") === "1";
-const DIR = MOCK ? path.join(BASE_DIR, "mock-run") : BASE_DIR; if (MOCK) fs.mkdirSync(DIR, { recursive: true });
+const RUN_DIR = arg("--run-dir", null);
+const DIR0 = RUN_DIR ? (path.isAbsolute(RUN_DIR) ? RUN_DIR : path.join(BASE_DIR, RUN_DIR)) : BASE_DIR;
+const DIR = MOCK ? path.join(DIR0, "mock-run") : DIR0; fs.mkdirSync(DIR, { recursive: true });
+const RUN_ID = arg("--run-id", RUN_DIR ? path.basename(DIR0) : "storm-2026-10-01");
+const WALLET_META = arg("--wallet-meta", "/workspace/artifacts/kns-tn10/snapshot-wallets/meta.json");
+const SNAP_FILE = arg("--snapshot", fs.existsSync(path.join(DIR0, "utxo-snapshot.json")) ? path.join(DIR0, "utxo-snapshot.json") : path.join(BASE_DIR, "utxo-snapshot.json"));
+const CONTROL_FILE = path.join(DIR0, "control.json");
 const API_DIR = "/workspace/artifacts/kns-tn10/api";
 const NET = "testnet-10";
 const N0 = arg("--node", "ws://127.0.0.1:17210");
-const HARD_CAP = 30; // stp chose 30 names/min (hard cap)
-const RATE = MOCK ? Math.max(1, Number(arg("--rate", "30"))) : Math.min(HARD_CAP, Math.max(1, Number(arg("--rate", "30")))); // cap bypass only in mock (no network)
+const HARD_CAP = 6000; // names/min absolute ceiling (control.json cannot exceed it)
+let RATE = Math.min(HARD_CAP, Math.max(1, Number(arg("--rate", "30"))));
 const LEN_MIN = Math.max(5, Number(arg("--len-min", "5"))), LEN_MAX = Math.max(LEN_MIN, Number(arg("--len-max", "10")));
-const MAX_INFLIGHT = Number(arg("--max-inflight", "12"));
+let MAX_INFLIGHT = Number(arg("--max-inflight", "12"));
+let MAX_UNCONFIRMED = Number(arg("--max-unconfirmed", "2000"));
+let BUSY_WAIT_MS = Math.max(20, Number(arg("--busy-wait-ms", "5000"))); // retry wait after "all wallets busy" (5000 = previous behaviour)
 const MAX_HOURS = Number(arg("--max-hours", "24"));
 const MAX_SPEND = Number(arg("--max-spend-tkas", "0")); // 0 = no cap (funds are the cap)
 const FEE_MULT = Math.max(1, Math.round(Number(arg("--fee-mult", process.env.KNS_FEE_MULT || "1"))));
 const DRY = Number(arg("--dry-run", "0"));
 const BROADCAST = arg("--broadcast", "0") === "1";
 const CONFIRM_SAMPLE_MIN = Number(arg("--confirm-sample-min", "10")); // public REST sample period, 0 = off
-const WALLET_COOLDOWN_MS = Number(arg("--wallet-cooldown-ms", "60000"));
+let WALLET_COOLDOWN_MS = Number(arg("--wallet-cooldown-ms", "60000"));
 const STOP_FILE = path.join(DIR, "STOP");
 const EVENTS = path.join(DIR, DRY ? "dryrun-events.jsonl" : "events.jsonl");
 const NAMES = path.join(DIR, DRY ? "dryrun-names.jsonl" : "names.jsonl");
@@ -49,6 +67,7 @@ const LOCK = BigInt(Math.round(Number(arg("--lock-tkas", "36")) * 1e8)); // P2SH
 const PRIORITY_COMMIT = kaspa.kaspaToSompi("0.01"), PRIORITY_REVEAL = kaspa.kaspaToSompi("0.02");
 const MIN_CHANGE = 100000000n; // keep commit change >= 1 TKAS (storage mass)
 const MAX_INPUTS = 16;
+const SWEEP_SMALLS = Math.max(0, Math.min(MAX_INPUTS - 1, Number(arg("--sweep-smalls", "0"))));
 // --owner-mode payer (DEFAULT, proven 26 Sep): one random snapshot wallet that can afford the name pays the commit AND owns/signs the reveal.
 // --owner-mode split (opt-in): random owner 0..25699, commit funded by other snapshot wallets (attribution unproven).
 const OWNER_MODE = arg("--owner-mode", "payer");
@@ -66,7 +85,7 @@ if (!BROADCAST && !DRY && !MOCK) { console.error("nothing to do: use --dry-run N
 if (Number(arg("--rate", "30")) > HARD_CAP) out({ phase: "rate_clamped", requested: Number(arg("--rate")), rate: RATE });
 
 // ---- keys (memory only)
-const meta = JSON.parse(fs.readFileSync("/workspace/artifacts/kns-tn10/snapshot-wallets/meta.json", "utf8"));
+const meta = JSON.parse(fs.readFileSync(WALLET_META, "utf8"));
 const keyByIndex = new Map(), indexByAddr = new Map();
 for (const l of fs.readFileSync(meta.privkeys_file, "utf8").split("\n")) { if (!l) continue; const j = JSON.parse(l); keyByIndex.set(j.index, { address: j.address, hex: j.private_key_hex }); indexByAddr.set(j.address, j.index); }
 const OWNER_MAX = keyByIndex.size - 1;
@@ -79,7 +98,7 @@ for (const f of fs.readdirSync(API_DIR)) if (f.startsWith("smoke-result-") && f.
 const usedFromSmoke = used.size;
 
 // ---- wallet UTXO tracking: snapshot + replay of own journal
-const snap = JSON.parse(fs.readFileSync(path.join(BASE_DIR, "utxo-snapshot.json"), "utf8"));
+const snap = JSON.parse(fs.readFileSync(SNAP_FILE, "utf8"));
 if (MOCK) { const lim = Number(arg("--mock-wallets", "40")); const keep = Object.keys(snap.byAddress).filter((a) => snap.byAddress[a].reduce((x, u) => x + Number(u.amount), 0) > 50e8).slice(0, lim); snap.byAddress = Object.fromEntries(keep.map((a) => [a, snap.byAddress[a]])); }
 const wallets = new Map(); // addr -> { index, utxos: Map(key -> utxo), busyUntil, quarantined }
 const ukey = (txid, idx) => `${txid}:${idx}`;
@@ -118,14 +137,14 @@ const addrList = () => [...wallets.entries()].filter(([a, w]) => !w.quarantined 
 // true if some wallet (ignoring busy/cooldown) could still fund a name => shortage is temporary, not exhaustion
 function anyCanAfford() {
   const need = LOCK + FEE_HEAD + MIN_CHANGE;
-  if (OWNER_MODE === "payer") { for (const [, w] of wallets) if (!w.quarantined && w.utxos.size && w.utxos.size <= MAX_INPUTS && spendable(w) >= need && selectInputs(fundEntries([[null, w]]))) return true; return false; }
+  if (OWNER_MODE === "payer") { for (const [, w] of wallets) if (!w.quarantined && w.utxos.size && (SWEEP_SMALLS || w.utxos.size <= MAX_INPUTS) && spendable(w) >= need && selectInputs(fundEntries([[null, w]]))) return true; return false; }
   return fundsSompi() >= need * 2n;
 }
 function pickFunding() {
   const avail = addrList(); if (!avail.length) return null;
   if (OWNER_MODE === "payer") {
     const need = LOCK + FEE_HEAD + MIN_CHANGE;
-    const rich = avail.filter(([, w]) => w.utxos.size <= MAX_INPUTS && spendable(w) >= need);
+    const rich = avail.filter(([, w]) => (SWEEP_SMALLS || w.utxos.size <= MAX_INPUTS) && spendable(w) >= need);
     for (let tries = 0; tries < 20 && rich.length; tries++) {
       const k = crypto.randomInt(rich.length); const c = rich[k];
       if (selectInputs(fundEntries([c]))) return { primary: c[0], chosen: [c], sum: spendable(c[1]) };
@@ -158,20 +177,46 @@ function pickFunding() {
 }
 // Choose an ordered input prefix the SDK generator will consume completely: prefix without its last input < LOCK,
 // full prefix >= LOCK + fee headroom + MIN_CHANGE => change >= ~1 TKAS (keeps KIP-9 storage mass low).
-const FEE_HEAD = 5000000n;
+const FEE_HEAD = 15000000n; // 0.15 TKAS commit-fee headroom (storm feerates)
 function selectInputs(entries) {
-  const orders = [[...entries].sort((a, b) => (a.amount < b.amount ? 1 : -1)), [...entries].sort((a, b) => (a.amount < b.amount ? -1 : 1))];
+  const orders = [];
+  if (SWEEP_SMALLS && entries.length > 1) { // preferred: k smallest first (sum < LOCK), then the largest UTXO
+    const asc = [...entries].sort((a, b) => (a.amount < b.amount ? -1 : 1)); const big = asc[asc.length - 1];
+    for (let k = Math.min(SWEEP_SMALLS, asc.length - 1); k >= 0; k--) orders.push([...asc.slice(0, k), big]);
+  }
+  orders.push([...entries].sort((a, b) => (a.amount < b.amount ? 1 : -1)), [...entries].sort((a, b) => (a.amount < b.amount ? -1 : 1)));
   for (let k = 0; k < 10; k++) { const e = [...entries]; for (let i = e.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [e[i], e[j]] = [e[j], e[i]]; } orders.push(e); }
-  for (const ord of orders) { let s = 0n; const pre = []; for (const e of ord) { if (s >= LOCK) break; pre.push(e); s += e.amount; } if (s - pre[pre.length - 1].amount < LOCK && s >= LOCK + FEE_HEAD + MIN_CHANGE) return pre; }
+  for (const ord of orders) { let s = 0n; const pre = []; for (const e of ord) { if (s >= LOCK) break; pre.push(e); s += e.amount; } if (pre.length <= MAX_INPUTS && s - pre[pre.length - 1].amount < LOCK && s >= LOCK + FEE_HEAD + MIN_CHANGE) return pre; }
   return null;
 }
 const fundEntries = (chosen) => chosen.flatMap(([addr, w]) => [...w.utxos.values()].map((u) => entryOf(addr, u)));
 const entryOf = (addr, u) => ({ address: addr, outpoint: { transactionId: u.transactionId, index: u.index }, amount: BigInt(u.amount), scriptPublicKey: u.scriptPublicKey, blockDaaScore: BigInt(u.blockDaaScore || 0), isCoinbase: !!u.isCoinbase });
+// ---- fee policy: fee = max(1x fee, mass * ceil(margin * live feerate)); live = /tmp/r6-feerate (<120 s) else n0 getFeeEstimate (cached) else 4x fee
+const FEERATE_FILE = arg("--feerate-file", "/tmp/r6-feerate"), FEERATE_MARGIN = Number(arg("--feerate-margin", "1.2")), FALLBACK_MULT = Math.max(4, FEE_MULT);
+const DRY_FEERATE = Number(arg("--dry-feerate", "0"));
+let n0Est = null; // { feerate, at, priority, normal }
+let feeState = { mode: "init", live: null, used: null, at: 0 };
+function refreshFeerate() {
+  if (Date.now() - feeState.at < 5000) return feeState;
+  if (DRY && DRY_FEERATE > 0) return (feeState = { mode: "dry_fixed", live: DRY_FEERATE, used: Math.ceil(DRY_FEERATE * FEERATE_MARGIN), at: Date.now() });
+  try { const st = fs.statSync(FEERATE_FILE); const v = Number(fs.readFileSync(FEERATE_FILE, "utf8").trim());
+    if (Date.now() - st.mtimeMs < 120000 && v > 0 && v < 1e6) return (feeState = { mode: "live_file", live: v, used: Math.ceil(v * FEERATE_MARGIN), at: Date.now() }); } catch {}
+  if (n0Est && Date.now() - n0Est.at < 60000 && n0Est.feerate > 0) return (feeState = { mode: "n0_estimate", live: n0Est.feerate, used: Math.ceil(n0Est.feerate * FEERATE_MARGIN), at: Date.now(), priority: n0Est.priority, normal: n0Est.normal });
+  return (feeState = { mode: "fallback_mult", live: null, used: null, mult: FALLBACK_MULT, at: 0 }); // not cached; LIVE loop holds instead of using it
+}
 async function createTx(opts) {
   const first = await kaspa.createTransactions(opts);
-  if (FEE_MULT === 1) return first;
-  const base = BigInt(opts.priorityFee ?? 0n), net = BigInt(first.summary.fees) - base;
-  return kaspa.createTransactions({ ...opts, priorityFee: base * BigInt(FEE_MULT) + (net > 0n ? net : 0n) * BigInt(FEE_MULT - 1) });
+  const fs0 = refreshFeerate(); const base = BigInt(opts.priorityFee ?? 0n); const oneX = BigInt(first.summary.fees);
+  let target;
+  if (fs0.used) { const mass = BigInt(first.transactions[0].mass); target = mass * BigInt(fs0.used); if (target < oneX) target = oneX; }
+  else target = oneX * BigInt(fs0.mult);
+  const net = oneX - base; const prio = target - net; if (prio <= base) return first;
+  let r = await kaspa.createTransactions({ ...opts, priorityFee: prio });
+  if (fs0.used) { // smaller change => larger storage mass: re-price once on the final mass (+2% pad)
+    const m2 = BigInt(r.transactions[0].mass); const t2 = (m2 * BigInt(fs0.used) * 102n) / 100n;
+    if (BigInt(r.summary.fees) < t2) r = await kaspa.createTransactions({ ...opts, priorityFee: t2 - net });
+  }
+  return r;
 }
 const spkHex = (spk) => (typeof spk === "string" ? spk : spk.script ?? spk.toString());
 const outUtxo = (txid, i, o) => ({ transactionId: txid, index: i, amount: String(o.value), scriptPublicKey: { version: o.scriptPublicKey.version, script: o.scriptPublicKey.script }, blockDaaScore: "0", isCoinbase: false });
@@ -286,7 +331,7 @@ async function oneName() {
   applyCommit(b);
   const info = { label, owner_index: owner, owner: b.ownerAddr, primary: b.primary, payer_wallets: b.wallets.map((a) => indexByAddr.get(a)), commitId: b.commitId, p2sh_addr: b.p2shAddr, p2sh_index: b.p2shIdx, lock_sompi: String(LOCK),
     commit_fee_sompi: String(b.commitFee), commit_mass: b.commitMass, spent: b.spent, created: b.commitCreated, commit_submit_at: new Date(tc).toISOString(), commit_submit_ms: cr.ms };
-  ev({ phase: "commit_accepted", ...info, note: cr.note }); pendingReveals.set(label, info); watch.set(b.commitId, { label, kind: "commit", at: Date.now() });
+  ev({ phase: "commit_accepted", ...info, fee_mode: feeState.mode, feerate_live: feeState.live, feerate_used: feeState.used, note: cr.note }); pendingReveals.set(label, info); watch.set(b.commitId, { label, kind: "commit", at: Date.now() });
   let rv = b.reveal, ok = false, lastErr = null;
   for (let attempt = 1; attempt <= 4 && !ok; attempt++) {
     if (attempt > 1) { await sleep([0, 2000, 10000, 30000][attempt - 1]); try { rv = await doReveal(label, info); } catch (e) { lastErr = String(e?.message || e); continue; } }
@@ -294,11 +339,11 @@ async function oneName() {
     if (rr.ok) {
       ok = true; applyReveal(rv.created); pendingReveals.delete(label);
       const spend = b.commitFee + rv.fee + PRICE_SOMPI; stats.names_ok++; stats.spend_sompi += spend; stats.fee_sompi += b.commitFee + rv.fee;
-      ev({ phase: "reveal_accepted", label, revealId: rv.revealId, attempt, reveal_fee_sompi: String(rv.fee), reveal_mass: rv.mass, created: rv.created, name_spend_sompi: String(spend), reveal_submit_at: new Date(tr).toISOString(), reveal_submit_ms: rr.ms, note: rr.note });
-      const row = { at: now(), label, len: label.length, owner_index: owner, owner: b.ownerAddr, payer_wallets: info.payer_wallets, commitId: b.commitId, revealId: rv.revealId,
+      ev({ phase: "reveal_accepted", label, revealId: rv.revealId, attempt, reveal_fee_sompi: String(rv.fee), reveal_mass: rv.mass, fee_mode: feeState.mode, feerate_used: feeState.used, created: rv.created, name_spend_sompi: String(spend), reveal_submit_at: new Date(tr).toISOString(), reveal_submit_ms: rr.ms, note: rr.note });
+      const row = { at: now(), run_id: RUN_ID, label, domain: `${label}.kas`, len: label.length, owner_index: owner, owner: b.ownerAddr, payer_wallets: info.payer_wallets, commitId: b.commitId, revealId: rv.revealId,
         commit_submit_at: info.commit_submit_at, reveal_submit_at: new Date(tr).toISOString(), accepted_latency_ms: Date.now() - t0, commit_fee_tkas: tk(b.commitFee), reveal_fee_tkas: tk(rv.fee), price_tkas: 35, name_spend_tkas: tk(spend), attempts: attempt };
       fs.appendFileSync(NAMES, JSON.stringify(row) + "\n");
-      if (!MOCK) fs.writeFileSync(path.join(API_DIR, `smoke-result-${label}.json`), JSON.stringify({ domain: `${label}.kas`, payer: b.primary, owner: b.ownerAddr, commitId: b.commitId, revealId: rv.revealId, inscriptionId: `${rv.revealId}i0`, feeKas: 35, p2shAddress: b.p2shAddr, at: now(), via: "kns-storm-runner" }, null, 2) + "\n");
+      if (!MOCK) fs.writeFileSync(path.join(API_DIR, `smoke-result-${label}.json`), JSON.stringify({ domain: `${label}.kas`, payer: b.primary, owner: b.ownerAddr, commitId: b.commitId, revealId: rv.revealId, inscriptionId: `${rv.revealId}i0`, feeKas: 35, p2shAddress: b.p2shAddr, at: now(), via: "kns-storm-runner", run_id: RUN_ID }, null, 2) + "\n");
       watch.set(rv.revealId, { label, kind: "reveal", at: Date.now(), t0 });
     } else if (rr.uncertain) { stats.uncertain++; lastErr = rr.error; ev({ phase: "tx_uncertain", kind: "reveal", label, txid: rr.txid, wallets: [b.primary], error: rr.error }); wal(b.primary).quarantined = true; break; }
     else { lastErr = rr.error; ev({ phase: "reveal_rejected", label, revealId: rr.txid, attempt, error: rr.error, ms: rr.ms }); if (/already spent/i.test(rr.error)) break; }
@@ -330,12 +375,16 @@ function saveStatus(extra = {}) {
   const avg = stats.names_ok ? Number(stats.spend_sompi) / stats.names_ok / 1e8 : 35.035;
   fs.writeFileSync(STATUS, JSON.stringify({ at: now(), pid: process.pid, rate_cap_per_min: RATE, hard_cap: HARD_CAP, started_at: new Date(startedAt).toISOString(), elapsed_min: +el.toFixed(1), ...stats, spend_sompi: undefined, fee_sompi: undefined,
     spend_tkas: tk(stats.spend_sompi), fees_tkas: tk(stats.fee_sompi), inflight, pending_reveals: pendingReveals.size, watching: watch.size, funds_left_tkas: +tk(f).toFixed(2), est_names_left: Math.floor(tk(f) / (avg + 1.1)), est_hours_left_at_cap: +(tk(f) / (avg + 1.1) / RATE / 60).toFixed(2),
-    wallets_quarantined: [...wallets.values()].filter((w) => w.quarantined).length, stopping, ...extra }, null, 2) + "\n");
+    wallets_quarantined: [...wallets.values()].filter((w) => w.quarantined).length, max_inflight: MAX_INFLIGHT, max_unconfirmed: MAX_UNCONFIRMED, wallet_cooldown_ms: WALLET_COOLDOWN_MS, busy_wait_ms: BUSY_WAIT_MS, fee: feeState, stopping, ...extra }, null, 2) + "\n");
 }
 
 // startup
 const info0 = await (await getRpc()).getServerInfo();
-ev({ phase: "runner_start", pid: process.pid, owner_mode: OWNER_MODE, node: N0, synced: info0.isSynced, utxoindex: info0.hasUtxoIndex, rate: RATE, len: [LEN_MIN, LEN_MAX], fee_mult: FEE_MULT, lock_tkas: tk(LOCK), funds_tkas: tk(fundsSompi()), wallets: wallets.size, used_labels: used.size, pending_reveals_from_journal: pendingReveals.size, snapshot_at: snap.at });
+// n0 fee estimate refresher (fallback when the feerate file is missing/stale)
+async function refreshN0Est() { try { const c = await getRpc(); const r = await c.getFeeEstimate({}); const e = r.estimate || r; const pr = Number(e.priorityBucket?.feerate || 0), nb = Number(e.normalBuckets?.[0]?.feerate || 0);
+  n0Est = { feerate: Math.max(pr, 2 * nb), priority: pr, normal: nb, at: Date.now() }; } catch {} }
+await refreshN0Est(); setInterval(refreshN0Est, 10000).unref();
+ev({ phase: "runner_start", pid: process.pid, run_id: RUN_ID, run_dir: DIR, wallet_meta: WALLET_META, snapshot_file: SNAP_FILE, sweep_smalls: SWEEP_SMALLS, busy_wait_ms: BUSY_WAIT_MS, wallet_cooldown_ms: WALLET_COOLDOWN_MS, max_inflight: MAX_INFLIGHT, max_unconfirmed: MAX_UNCONFIRMED, feerate_file: FEERATE_FILE, feerate_margin: FEERATE_MARGIN, fee: refreshFeerate(), owner_mode: OWNER_MODE, node: N0, synced: info0.isSynced, utxoindex: info0.hasUtxoIndex, rate: RATE, len: [LEN_MIN, LEN_MAX], fee_mult: FEE_MULT, lock_tkas: tk(LOCK), funds_tkas: tk(fundsSompi()), wallets: wallets.size, used_labels: used.size, pending_reveals_from_journal: pendingReveals.size, snapshot_at: snap.at });
 if (!info0.isSynced) { ev({ phase: "abort", reason: "n0_not_synced" }); process.exit(4); }
 // recover reveals left pending by a previous run
 for (const [label, info] of [...pendingReveals]) {
@@ -346,15 +395,24 @@ for (const [label, info] of [...pendingReveals]) {
 }
 const replayedOk = stats.names_ok; // names already done in earlier runs (journal replay)
 const statusTimer = setInterval(() => saveStatus(), 15000);
-const gap = 60000 / RATE; let next = Date.now(), noFunds = 0, exitReason = "stopped";
+let next = Date.now(), noFunds = 0, exitReason = "stopped", lastNoFee = 0;
+// control.json (optional) re-read every 2 s
+let controlMtime = 0;
+function applyControl() { try { const st = fs.statSync(CONTROL_FILE); if (st.mtimeMs === controlMtime) return; controlMtime = st.mtimeMs; const c = JSON.parse(fs.readFileSync(CONTROL_FILE, "utf8"));
+  if (c.rate_per_min > 0) RATE = Math.min(HARD_CAP, Math.round(c.rate_per_min)); if (c.max_inflight > 0) MAX_INFLIGHT = Math.round(c.max_inflight); if (c.wallet_cooldown_ms >= 0) WALLET_COOLDOWN_MS = Math.round(c.wallet_cooldown_ms);
+  if (c.max_unconfirmed > 0) MAX_UNCONFIRMED = Math.round(c.max_unconfirmed); if (c.busy_wait_ms >= 20) BUSY_WAIT_MS = Math.round(c.busy_wait_ms);
+  ev({ phase: "control_applied", rate_per_min: RATE, max_inflight: MAX_INFLIGHT, wallet_cooldown_ms: WALLET_COOLDOWN_MS, max_unconfirmed: MAX_UNCONFIRMED, busy_wait_ms: BUSY_WAIT_MS }); } catch (e) { if (fs.existsSync(CONTROL_FILE)) ev({ phase: "control_invalid", error: String(e?.message || e).slice(0, 120) }); } }
+applyControl(); setInterval(applyControl, 2000).unref();
+
 while (!stopping) {
   if (fs.existsSync(STOP_FILE)) { exitReason = "stop_file"; ev({ phase: "stop_file_seen" }); stopping = true; break; }
   if ((Date.now() - startedAt) / 3600000 >= MAX_HOURS) { exitReason = "max_hours"; ev({ phase: "max_hours_reached" }); break; }
   if (MAX_SPEND && tk(stats.spend_sompi) >= MAX_SPEND) { exitReason = "max_spend"; ev({ phase: "max_spend_reached" }); break; }
   while (recent.length && Date.now() - recent[0] > 60000) recent.shift();
-  if (Date.now() < next || inflight >= MAX_INFLIGHT || recent.length >= RATE) { await sleep(50); continue; }
-  next = Math.max(next + gap, Date.now()); recent.push(Date.now()); inflight++;
-  oneName().then((r) => { if (r === "nofunds") noFunds++; else if (r !== "busy") noFunds = 0; if (r === "busy") next = Date.now() + 5000; }).catch((e) => ev({ phase: "name_crash", error: String(e?.message || e).slice(0, 200) })).finally(() => { inflight--; });
+  if (!MOCK && !refreshFeerate().used) { if (Date.now() - lastNoFee > 60000) { lastNoFee = Date.now(); ev({ phase: "no_feerate_hold", reason: "feerate file missing/stale and no n0 fee estimate" }); } await sleep(500); continue; }
+  if (Date.now() < next || inflight >= MAX_INFLIGHT || recent.length >= RATE || watch.size >= MAX_UNCONFIRMED) { await sleep(20); continue; }
+  next = Math.max(next + 60000 / RATE, Date.now()); recent.push(Date.now()); inflight++;
+  oneName().then((r) => { if (r === "nofunds") noFunds++; else if (r !== "busy") noFunds = 0; if (r === "busy") next = Date.now() + BUSY_WAIT_MS; }).catch((e) => ev({ phase: "name_crash", error: String(e?.message || e).slice(0, 200) })).finally(() => { inflight--; });
   if (noFunds >= 3 && inflight <= 1) { exitReason = "funds_exhausted"; ev({ phase: "funds_exhausted_stop", reason: "no snapshot wallet can afford a name", funds_left_tkas: +tk(fundsSompi()).toFixed(2) }); break; }
   sampleConfirm().catch(() => {});
 }
@@ -365,7 +423,7 @@ if (stopping && exitReason === "stopped") exitReason = "signal";
 const nm = fs.existsSync(NAMES) ? fs.readFileSync(NAMES, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
 const lat = nm.map((r) => r.accepted_latency_ms).sort((a, b) => a - b); const q = (p) => (lat.length ? lat[Math.min(lat.length - 1, Math.floor(p * lat.length))] : null);
 const elMin = (Date.now() - startedAt) / 60000;
-const final = { at: now(), phase: "final_summary", exit_reason: exitReason, owner_mode: OWNER_MODE, rate_cap_per_min: RATE, started_at: new Date(startedAt).toISOString(), runtime_min: +elMin.toFixed(1),
+const final = { at: now(), phase: "final_summary", run_id: RUN_ID, exit_reason: exitReason, owner_mode: OWNER_MODE, rate_cap_per_min: RATE, started_at: new Date(startedAt).toISOString(), runtime_min: +elMin.toFixed(1),
   names_ok_this_run: stats.names_ok - replayedOk, names_total_journal: nm.length, avg_names_per_min: +((stats.names_ok - replayedOk) / (elMin || 1)).toFixed(2), commit_fail: stats.commit_fail, reveal_fail: stats.reveal_fail, uncertain: stats.uncertain,
   stranded: fs.existsSync(path.join(DIR, "stranded.jsonl")) ? fs.readFileSync(path.join(DIR, "stranded.jsonl"), "utf8").trim().split("\n").filter(Boolean).length : 0,
   pending_reveals: pendingReveals.size, inflight_left: inflight, spend_tkas_this_run: tk(stats.spend_sompi), fees_tkas_this_run: tk(stats.fee_sompi), spend_tkas_journal: +nm.reduce((a, r) => a + r.name_spend_tkas, 0).toFixed(3),

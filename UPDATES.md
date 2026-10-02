@@ -2,6 +2,12 @@
 
 Newest first. Times Europe/Brussels.
 
+## 2 Oct 2026 ~20:16 CEST
+
+- Nightly refresh after the 1–2 Oct storm chain: [results/inscriptions.csv](results/inscriptions.csv) now **154,568** creates with reveal tx (prior 124,586 + storm 9,509 + blueprint 8,258 + blueprint2 757 + dust 58 + funded 11,400). Newest: `eukjsfzxl.kas` 12:52:59 CEST 2 Oct. Sources: CSV `run` column; `storm-2026-10-01/final-summary.json` (`names_ok_this_run` 9509); `blueprint-2026-10-01/final-summary.json` (8258); `blueprint2-2026-10-01/final-summary.json` (757); `dust-2026-10-02/final-summary.json` (58); `funded-2026-10-02/final-summary.json` (11400). Export allows public `owner` / `run_id` fields from the storm runner.
+- Storm **ran** 1 Oct 21:46–21:54 CEST (after the 20:21 prep note): payer-mode on snapshot leftovers, rate ramped 30→3600/min, exit `funds_exhausted`, 0 fails. Then blueprint (8,258) and blueprint2 (757) the same evening; dust (58) and funded (11,400 at 180/min) on 2 Oct. Ownership verify 2 Oct midday: storm/blueprint/blueprint2 **all expected / 0 missing / 0 wrong** (`_ownership_verify_2026-10-01/combined-report.json`). Run notes: [docs/runs/STORM-2026-10-01.md](docs/runs/STORM-2026-10-01.md), [BLUEPRINT-2026-10-01.md](docs/runs/BLUEPRINT-2026-10-01.md), [FUNDED-2026-10-02.md](docs/runs/FUNDED-2026-10-02.md).
+- Updated sanitized `scripts/kns-storm-runner.mjs` (run-dir / run-id / wallet-meta / live feerate / control.json / `--sweep-smalls` / HARD_CAP 6000) and `scripts/export-results-csv.py` (`owner`/`run_id` allowed; storm runs classified by `run_id` or via).
+
 ## 1 Oct 2026 ~20:21 CEST
 
 - Nightly refresh: [results/inscriptions.csv](results/inscriptions.csv) still **124,586** creates with reveal tx (smoke 1, bulk 1,518, Phase A 69,856, S3 50,000, R1 3,211). Newest create unchanged: `stp-bulk-1518` 26 Sep 09:51 CEST. Sources: CSV run column; digest `api/inscriptions-digest-compact.txt` (`count` 124586); R1 `r1-done/` 3,211. No new creates since the 26 Sep stress stop.
