@@ -2,6 +2,12 @@
 
 Newest first. Times Europe/Brussels.
 
+## 3 Oct 2026 ~20:20 CEST
+
+- Nightly refresh: [results/inscriptions.csv](results/inscriptions.csv) still **154,568** creates with reveal tx (no new creates since funded run ended 12:52 CEST 2 Oct). Newest unchanged: `eukjsfzxl.kas`. Sources: CSV `run` column; `api/smoke-result-*.json` count 154568; digest `api/inscriptions-digest-compact.txt` (`count` 154568, generated 20:59 CEST 2 Oct).
+- **Trickle transfer run finished** overnight (2 Oct 21:58 – 3 Oct 01:06 CEST): **26,230** accepted domain transfers across **11,134** unique names from the funded-2026-10-02 100-wallet set (final session 17,118 ops). Exit `storm_stop_file`; 8 commit fails / 0 reveal fails. Fees 602.996 tKAS. Sources: `trickle-2026-10-02/summary.json`, `transfers.jsonl` (26230 lines). Creates not affected. Run notes: [docs/runs/TRICKLE-2026-10-02.md](docs/runs/TRICKLE-2026-10-02.md).
+- Added sanitized transfer scripts: `scripts/kns-trickle.mjs`, `kns-trickle-start.sh`, `kns-trickle-watchdog.py`, `kns-trickle-derive-dust-view.mjs`, `kns-trickle-topup-lookup.mjs`.
+
 ## 2 Oct 2026 ~20:16 CEST
 
 - Nightly refresh after the 1–2 Oct storm chain: [results/inscriptions.csv](results/inscriptions.csv) now **154,568** creates with reveal tx (prior 124,586 + storm 9,509 + blueprint 8,258 + blueprint2 757 + dust 58 + funded 11,400). Newest: `eukjsfzxl.kas` 12:52:59 CEST 2 Oct. Sources: CSV `run` column; `storm-2026-10-01/final-summary.json` (`names_ok_this_run` 9509); `blueprint-2026-10-01/final-summary.json` (8258); `blueprint2-2026-10-01/final-summary.json` (757); `dust-2026-10-02/final-summary.json` (58); `funded-2026-10-02/final-summary.json` (11400). Export allows public `owner` / `run_id` fields from the storm runner.

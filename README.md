@@ -29,7 +29,8 @@ What was tested on TN10 (all scripted, no wallet UI):
 | Snapshot Phase A | `stp-snap-w###-d###`, wallets 0–699, up to 100 names each | many distinct derived addresses | `kns-snap-smoke.mjs`, `kns-snap-phase-a.mjs`, `kns-snap-pool.mjs`, `phase-a-*.sh` |
 | S3 | `stp-s3-w#####-d#`, wallets 700–20699, 3 or 2 names each (50,000 target) | one name per child process | `kns-snap-s3.mjs`, `kns-s3-create.mjs`, `s3-supervisor.mjs` |
 | R1 | one random name, length 3–10, per wallet 20700–25699 (5,000 target) | includes 3- and 4-char fee tiers | `gen-r1-names.mjs`, `kns-snap-r1.mjs`, `r1-supervisor.sh` |
-| Storm (prepared 1 Oct) | random 5–10 char labels until leftover snapshot funds exhaust (not started) | leftover balances on snapshot wallets only; default payer-mode | `kns-storm-runner.mjs`, `kns-storm-start.sh`, `kns-storm-stop.sh`, `kns-storm-funds-inventory.mjs` |
+| Storm / Blueprint / Funded (1–2 Oct) | random 5–10 char creates until funds exhaust | snapshot leftovers, then fresh wallet sets | `kns-storm-runner.mjs`, `kns-storm-start.sh`, `kns-storm-stop.sh`, `kns-storm-funds-inventory.mjs` |
+| Trickle transfers (2–3 Oct) | move existing funded names between the 100 funded wallets | funded-2026-10-02 dust; transfer op only | `kns-trickle.mjs`, `kns-trickle-start.sh`, `kns-trickle-watchdog.py` |
 
 APIs used:
 
@@ -139,13 +140,17 @@ Run notes: [Phase A](docs/runs/SNAPSHOT-PHASE-A.md), [S3](docs/runs/S3.md), [R1]
 - `node scripts/rebuild-inscriptions-digest.mjs` rebuilds the digest from `api/smoke-result-*.json`.
 - `python3 scripts/export-results-csv.py` writes [results/inscriptions.csv](results/inscriptions.csv) (public fields only; refuses files with unexpected fields).
 
-### 8. Storm runner (prepared 1 Oct 2026, not started)
+### 8. Storm runner (ran 1–2 Oct 2026)
 
-Leftover snapshot-wallet tKAS only (treasury address hard-blocked). Default `--owner-mode payer` (proven 26 Sep). Broadcast needs `./kns-storm-start.sh GO` (`KNS_STORM_GO=1`). Offline: `node scripts/kns-storm-runner.mjs --dry-run N`. Notes: [docs/runs/STORM-2026-10-01.md](docs/runs/STORM-2026-10-01.md).
+Leftover snapshot-wallet tKAS only (treasury address hard-blocked). Default `--owner-mode payer` (proven 26 Sep). Broadcast needs `./kns-storm-start.sh GO` (`KNS_STORM_GO=1`). Offline: `node scripts/kns-storm-runner.mjs --dry-run N`. Notes: [docs/runs/STORM-2026-10-01.md](docs/runs/STORM-2026-10-01.md), [FUNDED-2026-10-02.md](docs/runs/FUNDED-2026-10-02.md).
+
+### 9. Trickle transfers (ran 2–3 Oct 2026)
+
+Moves already-created funded names between the 100 funded wallets (transfer op; no protocol fee). Broadcast needs `KNS_TRICKLE_GO=1` via `scripts/kns-trickle-start.sh`. Notes: [docs/runs/TRICKLE-2026-10-02.md](docs/runs/TRICKLE-2026-10-02.md).
 
 ## Results so far
 
-Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **2 Oct 2026 ~20:16 CEST**. Each row has a commit tx id and a reveal tx id recorded by the create script. Newest create in the export: `eukjsfzxl.kas` at 12:52:59 CEST 2 Oct (`run=funded-2026-10-02`).
+Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exported from the box's `api/smoke-result-*.json` at **3 Oct 2026 ~20:20 CEST** (unchanged since 2 Oct ~20:16). Each row has a commit tx id and a reveal tx id recorded by the create script. Newest create in the export: `eukjsfzxl.kas` at 12:52:59 CEST 2 Oct (`run=funded-2026-10-02`).
 
 | Run | Creates with reveal tx | Notes |
 | --- | --- | --- |
@@ -160,6 +165,8 @@ Counts below come from [results/inscriptions.csv](results/inscriptions.csv), exp
 | Dust | 58 | Blueprint2 dust consolidated to 6 wallets (2 Oct morning). Source: CSV `run=dust-2026-10-02`; `dust-2026-10-02/final-summary.json` |
 | Funded (2 Oct) | 11,400 | Fresh 100-wallet set + fan-out; 180/min until exhausted. Source: CSV `run=funded-2026-10-02`; `funded-2026-10-02/final-summary.json`. [FUNDED-2026-10-02.md](docs/runs/FUNDED-2026-10-02.md) |
 | **Total** | **154,568** | |
+
+Transfer stress (not creates): overnight trickle **2 Oct 21:58 – 3 Oct 01:06 CEST** moved **26,230** domains (**11,134** unique) among the funded-2026-10-02 wallets; exit `storm_stop_file`. Sources: `trickle-2026-10-02/summary.json`, `transfers.jsonl`. Notes: [docs/runs/TRICKLE-2026-10-02.md](docs/runs/TRICKLE-2026-10-02.md).
 
 Indexer / ownership: 23 Sep, `stp-bulk-0001`–`0750` all returned an owner (750/750, [older repo](https://github.com/STP-KAS/kns-kasware-tn10-test)). After the 26 Sep stress window, a read-only ownership verify over the **79,764** names created that day (`ownership_verify_storm_2026_09_26.py`) reported **owned_expected 79,764 / missing 0 / owned_other 0** (`ownership-verify-summary-2026-09-26.json`; `/owner` was tip-lag blocked so `/assets` was used). After the 1–2 Oct storm/blueprint runs, read-only `/assets` verify reported **9,509 + 8,258 + 757** expected / 0 missing / 0 wrong (`_ownership_verify_2026-10-01/combined-report.json`). Funded/dust journals report `owner_eq_payer_all` true (no separate indexer pass recorded for those two).
 
